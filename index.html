@@ -1,120 +1,60 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>GameMina | ネオン・アーケード ミニゲーム集</title>
-  <meta name="description" content="GameMina（ゲームミナ）- ブラウザで今すぐ遊べるネオン風ミニゲーム集。神経衰弱・スネーク・ブロック崩し・反射神経・15パズルの5本収録。登録不要・完全無料。">
-  <meta property="og:title" content="GameMina | ネオン・アーケード ミニゲーム集">
-  <meta property="og:description" content="ブラウザで今すぐ遊べるミニゲーム5本。登録不要・完全無料。">
-  <meta property="og:type" content="website">
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=DotGothic16&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>MINA CHRONICLE 〜光と音を永遠に〜 | GameMina RPG</title>
+<meta name="description" content="E16星系を舞台にしたファイナルファンタジー風の本格長編RPG。AURALIS二代目・ミナ・エウレカ・アーネストの物語。PWA対応・オフラインで遊べる。">
+<meta name="theme-color" content="#0a0f33">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MINA RPG">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
+<link rel="stylesheet" href="./css/game.css">
 </head>
 <body>
-  <div class="scanlines" aria-hidden="true"></div>
+<div id="app">
+  <div id="wrap">
+    <canvas id="game" width="960" height="540"></canvas>
 
-  <header class="site-header">
-    <div class="wrap header-inner">
-      <a class="brand" href="/">
-        <span class="brand-g">G</span><span class="brand-text">AMEMINA</span>
-      </a>
-      <span class="badge">NETLIFY READY</span>
+    <!-- モバイル用仮想パッド -->
+    <div id="pad" aria-hidden="true">
+      <div id="dpad">
+        <button class="pad-btn" data-pad="up"    style="grid-area:u">▲</button>
+        <button class="pad-btn" data-pad="left"  style="grid-area:l">◀</button>
+        <button class="pad-btn" data-pad="right" style="grid-area:r">▶</button>
+        <button class="pad-btn" data-pad="down"  style="grid-area:d">▼</button>
+      </div>
+      <div id="actionBtns">
+        <button class="act-btn ok"  data-pad="ok">A</button>
+        <button class="act-btn cancel" data-pad="cancel">B</button>
+        <button class="act-btn menu" data-pad="menu">☰</button>
+      </div>
     </div>
-  </header>
+  </div>
 
-  <main class="wrap">
-    <section class="hero">
-      <p class="hero-kicker">NEON ARCADE COLLECTION</p>
-      <h1 class="neon-title">GAMEMINA</h1>
-      <p class="hero-lead">ブラウザで今すぐ遊べるミニゲーム集。<br>登録不要・課金なし・高スコアはこの端末に自動保存。</p>
-      <ul class="hero-chips">
-        <li>収録タイトル <strong>5本</strong></li>
-        <li>スマホ対応</li>
-        <li>完全無料</li>
-      </ul>
-    </section>
+  <div id="rotateHint"><div>📱<br>端末を横にして遊んでね<br><small>MINA CHRONICLE</small></div></div>
 
-    <section class="game-grid" aria-label="ゲーム一覧">
+  <div id="topbar">
+    <span class="brand">MINA CHRONICLE</span>
+    <button id="installBtn" onclick="doInstall()" style="display:none">📥 インストール</button>
+  </div>
+</div>
 
-      <article class="card" data-color="cyan">
-        <div class="card-icon" aria-hidden="true">記</div>
-        <div class="card-body">
-          <div class="card-tags"><span class="tag">パズル</span><span class="tag">記憶</span></div>
-          <h2 class="card-title">神経衰弱</h2>
-          <p class="card-desc">8組のペアを記憶してめくる定番ゲーム。クリアタイムが最短記録になります。</p>
-          <p class="card-best" data-best="memory">最高記録 -- </p>
-          <a class="btn-play" href="/games/memory/">PLAY</a>
-        </div>
-      </article>
-
-      <article class="card" data-color="green">
-        <div class="card-icon" aria-hidden="true">蛇</div>
-        <div class="card-body">
-          <div class="card-tags"><span class="tag">アクション</span><span class="tag">育成</span></div>
-          <h2 class="card-title">スネーク</h2>
-          <p class="card-desc">餌を食べて伸びる蛇を操作。壁と自分の体に当たると終了。スコアを伸ばせ。</p>
-          <p class="card-best" data-best="snake">最高記録 --</p>
-          <a class="btn-play" href="/games/snake/">PLAY</a>
-        </div>
-      </article>
-
-      <article class="card" data-color="pink">
-        <div class="card-icon" aria-hidden="true">崩</div>
-        <div class="card-body">
-          <div class="card-tags"><span class="tag">アクション</span><span class="tag">定番</span></div>
-          <h2 class="card-title">ブロック崩し</h2>
-          <p class="card-desc">パドルでボールを弾き、54個のネオンブロックをすべて崩し切れ。</p>
-          <p class="card-best" data-best="breakout">最高記録 --</p>
-          <a class="btn-play" href="/games/breakout/">PLAY</a>
-        </div>
-      </article>
-
-      <article class="card" data-color="yellow">
-        <div class="card-icon" aria-hidden="true">反</div>
-        <div class="card-body">
-          <div class="card-tags"><span class="tag">反射神経</span><span class="tag">1分</span></div>
-          <h2 class="card-title">反射神経</h2>
-          <p class="card-desc">緑に変わった瞬間をタイミングよくタップ。ミリ秒の世界で自分の限界に挑む。</p>
-          <p class="card-best" data-best="reaction">最高記録 --</p>
-          <a class="btn-play" href="/games/reaction/">PLAY</a>
-        </div>
-      </article>
-
-      <article class="card" data-color="purple">
-        <div class="card-icon" aria-hidden="true">15</div>
-        <div class="card-body">
-          <div class="card-tags"><span class="tag">パズル</span><span class="tag">頭脳</span></div>
-          <h2 class="card-title">15パズル</h2>
-          <p class="card-desc">1から15のタイルをスライドして整列させる古典パズル。最少手数を狙え。</p>
-          <p class="card-best" data-best="fifteen">最高記録 --</p>
-          <a class="btn-play" href="/games/fifteen/">PLAY</a>
-        </div>
-      </article>
-
-      <article class="card card-soon" data-color="dim">
-        <div class="card-icon" aria-hidden="true">?</div>
-        <div class="card-body">
-          <div class="card-tags"><span class="tag">近日公開</span></div>
-          <h2 class="card-title">COMING SOON</h2>
-          <p class="card-desc">次のタイトルは鋭意開発中。お楽しみに。</p>
-          <span class="btn-play btn-disabled">LOCKED</span>
-        </div>
-      </article>
-
-    </section>
-  </main>
-
-  <footer class="site-footer">
-    <div class="wrap footer-inner">
-      <p>&copy; 2026 GameMina / gentaron</p>
-      <p class="footer-note">Static site hosted on Netlify</p>
-    </div>
-  </footer>
-
-  <script src="/js/hub.js"></script>
+<script src="./js/data_core.js"></script>
+<script src="./js/data_enemies.js"></script>
+<script src="./js/data_maps.js"></script>
+<script src="./js/data_story_a.js"></script>
+<script src="./js/data_story_b.js"></script>
+<script src="./js/audio.js"></script>
+<script src="./js/engine.js"></script>
+<script src="./js/field.js"></script>
+<script src="./js/menu.js"></script>
+<script src="./js/story.js"></script>
+<script src="./js/battle.js"></script>
+<script src="./js/main.js"></script>
 </body>
 </html>

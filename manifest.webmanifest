@@ -1,0 +1,77 @@
+{
+  "id": "/",
+  "name": "MINA CHRONICLE 〜光と音を永遠に〜",
+  "short_name": "MINA RPG",
+  "description": "E16星系を舞台にしたFF風の本格長編RPG。AURALIS二代目・ミナの物語が、6章+終章の大ボリュームで紡がれる。オフライン完全対応。",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "fullscreen", "minimal-ui"],
+  "orientation": "landscape",
+  "background_color": "#04051a",
+  "theme_color": "#0a0f33",
+  "lang": "ja",
+  "dir": "ltr",
+  "categories": ["games", "entertainment"],
+  "launch_handler": {
+    "client_mode": "focus-existing"
+  },
+  "icons": [
+    {
+      "src": "./icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "./icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "./icons/screenshot-wide.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "FF風コマンドバトル"
+    },
+    {
+      "src": "./icons/screenshot-narrow.png",
+      "sizes": "720x1280",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "スマホでも快適プレイ"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "つづきから",
+      "short_name": "続き",
+      "description": "前回の記録から再開",
+      "url": "./index.html?continue=1",
+      "icons": [{ "src": "./icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "新しいゲーム",
+      "short_name": "新規",
+      "description": "はじめから遊ぶ",
+      "url": "./index.html?new=1",
+      "icons": [{ "src": "./icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

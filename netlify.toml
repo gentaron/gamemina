@@ -1,49 +1,36 @@
-# ============================================================
-# GameMina - Netlify configuration
-# 静的サイトのため build コマンド不要。
-# publish はリポジトリルートを指定。
-# ============================================================
-
 [build]
   publish = "."
-  command = "echo 'Static site - no build required'"
 
-[build.environment]
-  NODE_VERSION = "20"
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+    Service-Worker-Allowed = "/"
 
-# ---------- セキュリティヘッダー ----------
+[[headers]]
+  for = "/manifest.webmanifest"
+  [headers.values]
+    Content-Type = "application/manifest+json"
+    Cache-Control = "public, max-age=0, must-revalidate"
+
 [[headers]]
   for = "/*"
   [headers.values]
-    X-Frame-Options = "DENY"
     X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "SAMEORIGIN"
     Referrer-Policy = "strict-origin-when-cross-origin"
-    Permissions-Policy = "geolocation=(), microphone=(), camera=()"
-
-# ---------- キャッシュ ----------
-[[headers]]
-  for = "/css/*"
-  [headers.values]
-    Cache-Control = "public, max-age=86400, must-revalidate"
 
 [[headers]]
   for = "/js/*"
   [headers.values]
-    Cache-Control = "public, max-age=86400, must-revalidate"
+    Cache-Control = "public, max-age=3600"
 
 [[headers]]
-  for = "/favicon.svg"
+  for = "/css/*"
   [headers.values]
-    Cache-Control = "public, max-age=604800"
+    Cache-Control = "public, max-age=3600"
 
-# ---------- 便利なリダイレクト ----------
-# 旧URL想定や打ち間違いを吸収
-[[redirects]]
-  from = "/home"
-  to = "/"
-  status = 301
-
-[[redirects]]
-  from = "/games"
-  to = "/"
-  status = 301
+[[headers]]
+  for = "/icons/*"
+  [headers.values]
+    Cache-Control = "public, max-age=604800, immutable"
