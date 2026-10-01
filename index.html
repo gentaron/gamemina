@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<title>GAMEMINA CHRONICLE ─ 星々の交響曲</title>
+<meta name="description" content="Eternal Dominion Universe をなぞる本格ファンタジーRPG。10章の物語、8人の仲間、次元を越えるボスたち。完全オフライン対応PWA。">
+<meta name="theme-color" content="#0b0e1a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="GAMEMINA">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app">
+  <div id="screen">
+    <canvas id="game" width="480" height="304"></canvas>
+    <div id="ui" aria-live="polite">
+
+      <!-- HUD (field) -->
+      <div id="hud" class="hidden">
+        <div id="hud-chapter" class="hud-chip"></div>
+        <div id="hud-right"><span id="hud-token" class="hud-chip"></span><button id="btn-menu" class="hud-btn" aria-label="メニュー">☰</button></div>
+      </div>
+
+      <!-- Dialogue -->
+      <div id="dialogue" class="hidden">
+        <div id="dlg-name" class="hidden"></div>
+        <div id="dlg-text"></div>
+        <div id="dlg-next" class="hidden">▼</div>
+      </div>
+
+      <!-- Choice list (field events) -->
+      <div id="choice" class="hidden"></div>
+
+      <!-- Battle UI -->
+      <div id="battle-ui" class="hidden">
+        <div id="bat-log" class="win"></div>
+        <div id="bat-party"></div>
+        <div id="bat-cmd" class="win hidden"></div>
+        <div id="bat-abil" class="win hidden"></div>
+        <div id="bat-item" class="win hidden"></div>
+        <div id="bat-target" class="win hidden"></div>
+      </div>
+
+      <!-- Menu overlay -->
+      <div id="menu" class="hidden"></div>
+      <!-- Shop overlay -->
+      <div id="shop" class="hidden"></div>
+      <!-- Save / system overlay -->
+      <div id="system-ui" class="hidden"></div>
+      <!-- Chapter card -->
+      <div id="chapter-card" class="hidden"></div>
+      <!-- Title screen -->
+      <div id="title" class="hidden"></div>
+      <!-- Toasts -->
+      <div id="toasts"></div>
+    </div>
+    <!-- Touch controls -->
+    <div id="touch" class="hidden">
+      <div id="dpad">
+        <button data-dir="up" class="tb tb-u" aria-label="上">▲</button>
+        <button data-dir="left" class="tb tb-l" aria-label="左">◀</button>
+        <button data-dir="right" class="tb tb-r" aria-label="右">▶</button>
+        <button data-dir="down" class="tb tb-d" aria-label="下">▼</button>
+      </div>
+      <div id="actbtns">
+        <button id="tb-a" class="tb-round" aria-label="決定">A</button>
+        <button id="tb-b" class="tb-round tb-b" aria-label="キャンセル">B</button>
+        <button id="tb-m" class="tb-round tb-m" aria-label="メニュー">M</button>
+      </div>
+    </div>
+  </div>
+  <div id="offline-banner" class="hidden">⚠ オフライン ─ キャッシュから動作中</div>
+</div>
+
+<script src="js/audio.js"></script>
+<script src="js/sprites.js"></script>
+<script src="js/data/abilities.js"></script>
+<script src="js/data/items.js"></script>
+<script src="js/data/characters.js"></script>
+<script src="js/data/enemies.js"></script>
+<script src="js/data/maps.js"></script>
+<script src="js/data/story.js"></script>
+<script src="js/engine/core.js"></script>
+<script src="js/engine/ui.js"></script>
+<script src="js/engine/save.js"></script>
+<script src="js/engine/scenes.js"></script>
+<script src="js/engine/field.js"></script>
+<script src="js/engine/battle.js"></script>
+<script src="js/engine/menu.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
