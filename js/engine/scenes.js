@@ -234,6 +234,7 @@ window.GM = window.GM || {};
     S.scene = 'gameover';
     GM.AUDIO.stopBGM();
     GM.AUDIO.playBGM('gameover');
+    $('hud').classList.add('hidden');
     const box = $('system-ui');
     box.innerHTML = '';
     const win = el('div', 'win');
@@ -282,10 +283,12 @@ window.GM = window.GM || {};
       </div>
       <div class="t-menu" id="t-menu"></div>
       <div class="t-cast" id="t-cast">${castHtml}</div>
-      <div class="t-foot">10 CHAPTERS / 8 PARTY MEMBERS / OFFLINE PWA<br>
-        Based on Eternal Dominion Universe lore ─ Character art: github.com/gentaron/image</div>
+      <div class="t-foot"><span class="t-keyhint">↑↓ 移動　Z / Enter 決定　X / Esc キャンセル　C メニュー　F 全画面</span><br>10 CHAPTERS / 8 PARTY MEMBERS / OFFLINE PWA ─ art: github.com/gentaron/image</div>
+      <div class="t-fs" id="t-fs" title="フルスクリーン切替 (F)">⛶ 全画面</div>
       <div class="t-inst hidden" id="t-install">⬇ インストール</div>`;
     box.classList.remove('hidden');
+    const tfs = $('t-fs');
+    if (tfs) tfs.addEventListener('click', () => GM.toggleFullscreen());
 
     const items = [
       { label: 'NEW GAME', act: newGame },

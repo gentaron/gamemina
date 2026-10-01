@@ -44,45 +44,55 @@ window.GM = window.GM || {};
     }
   });
 
-  /* title background: drifting starfield + big moon */
+  /* title background: drifting starfield + big moon (動的ビューポート対応) */
   const stars = [];
-  for (let i = 0; i < 90; i++) {
-    stars.push({ x: Math.random() * 480, y: Math.random() * 304, s: Math.random() < 0.85 ? 1 : 2, v: 4 + Math.random() * 14 });
+  function seedStars() {
+    stars.length = 0;
+    for (let i = 0; i < 130; i++) {
+      stars.push({ x: Math.random() * GM.VW, y: Math.random() * GM.VH, s: Math.random() < 0.85 ? 1 : 2, v: 4 + Math.random() * 14 });
+    }
   }
+  seedStars();
+  GM.onViewportChange = (function (prev) {
+    return function () { seedStars(); if (prev) prev(); };
+  })(typeof GM.onViewportChange === 'function' ? GM.onViewportChange : null);
   function renderTitleBG(c, tick) {
+    const VW = GM.VW, VH = GM.VH;
     c.fillStyle = '#05070f';
-    c.fillRect(0, 0, 480, 304);
+    c.fillRect(0, 0, VW, VH);
     // nebula
-    const g = c.createRadialGradient(240, 340, 40, 240, 340, 320);
+    const g = c.createRadialGradient(VW / 2, VH + 36, 40, VW / 2, VH + 36, 320);
     g.addColorStop(0, 'rgba(60,110,255,.28)');
     g.addColorStop(1, 'rgba(0,0,0,0)');
     c.fillStyle = g;
-    c.fillRect(0, 0, 480, 304);
+    c.fillRect(0, 0, VW, VH);
     // stars
     c.fillStyle = '#cfe0ff';
     stars.forEach((s) => {
       s.x -= s.v * 0.016;
-      if (s.x < 0) s.x = 480;
+      if (s.x < 0) s.x = VW;
       c.globalAlpha = 0.35 + 0.65 * Math.abs(Math.sin(tick / 900 + s.x));
       c.fillRect(Math.floor(s.x), Math.floor(s.y), s.s, s.s);
     });
     c.globalAlpha = 1;
     // twin stars (Ea16 + Eb16)
+    const mx = VW - 90;
     c.fillStyle = '#ffd98a';
-    c.beginPath(); c.arc(390, 60, 18, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.arc(mx, 60, 18, 0, Math.PI * 2); c.fill();
     c.fillStyle = 'rgba(255,217,138,.25)';
-    c.beginPath(); c.arc(390, 60, 26, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.arc(mx, 60, 26, 0, Math.PI * 2); c.fill();
     c.fillStyle = '#ff8a6a';
-    c.beginPath(); c.arc(430, 92, 7, 0, Math.PI * 2); c.fill();
-    // crystal silhouette
+    c.beginPath(); c.arc(mx + 40, 92, 7, 0, Math.PI * 2); c.fill();
+    // crystal silhouette (中央)
+    const cxm = Math.round(VW / 2);
     c.fillStyle = 'rgba(244,201,93,.9)';
-    c.fillRect(232, 236, 16, 40);
-    c.fillRect(226, 250, 28, 26);
+    c.fillRect(cxm - 8, 236, 16, 40);
+    c.fillRect(cxm - 14, 250, 28, 26);
     c.fillStyle = 'rgba(255,232,160,.9)';
-    c.fillRect(238, 244, 4, 28);
+    c.fillRect(cxm - 2, 244, 4, 28);
     if (GM.state.fade.a > 0) {
       c.fillStyle = `rgba(0,0,0,${GM.state.fade.a})`;
-      c.fillRect(0, 0, 480, 304);
+      c.fillRect(0, 0, VW, VH);
     }
   }
 
@@ -125,6 +135,36 @@ window.GM = window.GM || {};
 
     // prevent context menu / selection on game area
     $('screen').addEventListener('contextmenu', (e) => e.preventDefault());
+
+    // ☰ メニューボタン（これまでハンドラが無く無反応だったバグを修正）
+    const menuBtn = $('btn-menu');
+    if (menuBtn) {
+      menuBtn.addEventListener('click', () => {
+        if (GM.state.scene === 'field' && !GM.uiOwner && !GM.dialogueOpen()) {
+          GM.AUDIO.sfx('open');
+          GM.Menu.open();
+        }
+        menuBtn.blur();
+      });
+    }
+    // ⛶ フルスクリーンボタン
+    const fsBtn = $('btn-fs');
+    if (fsBtn) {
+      fsBtn.addEventListener('click', () => {
+        GM.toggleFullscreen();
+        fsBtn.blur();
+      });
+    }
+    // 会話ウィンドウのクリックで送り（PCマウス操作対応）
+    const dlgEl = $('dialogue');
+    if (dlgEl) {
+      dlgEl.addEventListener('click', () => {
+        if (GM.dialogueOpen() && !GM.uiOwner) {
+          GM.AUDIO.sfx('cursor');
+          GM.dialogueAdvance();
+        }
+      });
+    }
   }
 
   if (document.readyState === 'loading') {

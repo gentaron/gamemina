@@ -10,7 +10,7 @@
 window.GM = window.GM || {};
 (function (GM) {
   const U = GM.U, S = GM.state;
-  const TILE = 16, VW = 480, VH = 304;
+  const TILE = 16; // ビューポート (GM.VW/GM.VH) は動的（fitScreen が画面比に合わせ拡張）
 
   /* tile solidity（'T'=茨は通過不可） */
   const SOLID = new Set(['#', ' ', 'w', 't', 'r', 'c', 'C', 'b', 'p', 'm', 'x', 'o', '*', 'T']);
@@ -153,17 +153,20 @@ window.GM = window.GM || {};
   /* ---------------- vignette ---------------- */
   let vignette = null;
   function getVignette() {
-    if (vignette) return vignette;
+    const VW = GM.VW, VH = GM.VH;
+    if (vignette && vignette._w === VW && vignette._h === VH) return vignette;
     const cv = document.createElement('canvas');
     cv.width = VW; cv.height = VH;
+    cv._w = VW; cv._h = VH;
     const c = cv.getContext('2d');
-    const g = c.createRadialGradient(VW / 2, VH / 2, VH * 0.42, VW / 2, VH / 2, VH * 0.85);
+    const g = c.createRadialGradient(VW / 2, VH / 2, VH * 0.42, VW / 2, VH / 2, Math.max(VW, VH) * 0.85);
     g.addColorStop(0, 'rgba(0,0,0,0)');
     g.addColorStop(1, 'rgba(2,4,14,.42)');
     c.fillStyle = g; c.fillRect(0, 0, VW, VH);
     vignette = cv;
     return cv;
   }
+  GM.onViewportChange = () => { vignette = null; };
 
   /* ---------------- map load ---------------- */
   GM.loadMap = function (mapId) {
@@ -181,9 +184,15 @@ window.GM = window.GM || {};
     if (def.bgm) GM.AUDIO.playBGM(def.bgm);
     GM.updateHUD();
   };
+  /* カメラ: マップがビューポートより小さい場合は中央寄せ（余白は虚空） */
+  function camAxis(pos, mapPx, viewPx) {
+    if (mapPx >= viewPx) return U.clamp(pos, 0, mapPx - viewPx);
+    return (mapPx - viewPx) / 2;
+  }
   GM.centerCam = function () {
-    S.cam.x = U.clamp(S.player.x * TILE - VW / 2 + TILE / 2, 0, Math.max(0, S.map._w * TILE - VW));
-    S.cam.y = U.clamp(S.player.py || S.player.y * TILE - VH / 2 + TILE / 2, 0, Math.max(0, S.map._h * TILE - VH));
+    const VW = GM.VW, VH = GM.VH;
+    S.cam.x = camAxis(S.player.x * TILE - VW / 2 + TILE / 2, S.map._w * TILE, VW);
+    S.cam.y = camAxis(S.player.py || S.player.y * TILE - VH / 2 + TILE / 2, S.map._h * TILE, VH);
   };
 
   GM.startField = function () {
@@ -415,8 +424,9 @@ window.GM = window.GM || {};
       }
     });
     // camera
-    const txc = U.clamp(S.player.px + TILE / 2 - VW / 2, 0, Math.max(0, S.map._w * TILE - VW));
-    const tyc = U.clamp(S.player.py + TILE / 2 - VH / 2, 0, Math.max(0, S.map._h * TILE - VH));
+    const VW = GM.VW, VH = GM.VH;
+    const txc = camAxis(S.player.px + TILE / 2 - VW / 2, S.map._w * TILE, VW);
+    const tyc = camAxis(S.player.py + TILE / 2 - VH / 2, S.map._h * TILE, VH);
     S.cam.x += (txc - S.cam.x) * Math.min(1, dt / 80);
     S.cam.y += (tyc - S.cam.y) * Math.min(1, dt / 80);
   }
@@ -427,6 +437,7 @@ window.GM = window.GM || {};
 
   /* ---------------- render ---------------- */
   function renderField(ctx) {
+    const VW = GM.VW, VH = GM.VH;
     const map = S.map;
     if (!map || !S.bake) { ctx.fillStyle = '#000'; ctx.fillRect(0, 0, VW, VH); return; }
     const camX = Math.floor(S.cam.x), camY = Math.floor(S.cam.y);

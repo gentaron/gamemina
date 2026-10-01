@@ -7,7 +7,7 @@
 window.GM = window.GM || {};
 (function (GM) {
   const U = GM.U, S = GM.state, $ = GM.$;
-  const VW = 480, VH = 304;
+  // ビューポート (GM.VW/GM.VH) は動的。戦場は画面中央基準で配置
 
   const B = {
     active: false, party: [], enemies: [], order: [], turnIdx: 0,
@@ -90,6 +90,7 @@ window.GM = window.GM || {};
       S.scene = 'battle';
       GM.uiOwner = 'battle';
       $('battle-ui').classList.remove('hidden');
+      $('hud').classList.add('hidden');   // バトル中はHUDを隠す（ログとの重なり防止）
 
       B.active = true;
       B.canFlee = !opts.noEscape && !opts.boss;
@@ -586,21 +587,23 @@ window.GM = window.GM || {};
     return { x: pos.x, y: pos.y, text: String(text), color, sub, t: 0, vy: -0.045 };
   }
   function unitPos(unit) {
+    const cx0 = GM.VW / 2;
     if (unit.isEnemy) {
       const idx = B.enemies.indexOf(unit);
       const n = B.enemies.length;
-      const cx = 110 + (idx - (n - 1) / 2) * 70;
+      const cx = cx0 - 130 + (idx - (n - 1) / 2) * 70;
       const cy = 190 - (unit.boss ? 0 : 10);
       return { x: cx, y: cy - 40 };
     }
     const idx = B.party.indexOf(unit);
-    return { x: 400, y: 140 + idx * 22 };
+    return { x: cx0 + 160, y: 140 + idx * 22 };
   }
 
   /* ---------------- end ---------------- */
   function endBattle(result) {
     B.active = false;
     $('battle-ui').classList.add('hidden');
+    $('hud').classList.remove('hidden');
     GM.uiOwner = null;
     S.scene = 'field';
     if (result === 'win') {
@@ -656,6 +659,10 @@ window.GM = window.GM || {};
   };
 
   B.render = function (ctx) {
+    const VW = GM.VW, VH = GM.VH;
+    const cx = VW / 2;                 // 戦場の中心
+    const eBaseX = cx - 130;           // 敵陣の基準X
+    const pBaseX = cx + 168;           // 味方陣の基準X
     const shx = B.shake > 0 ? U.rand(-B.shake, B.shake) : 0;
     const shy = B.shake > 0 ? U.rand(-B.shake / 2, B.shake / 2) : 0;
     ctx.save();
@@ -673,7 +680,7 @@ window.GM = window.GM || {};
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, VW, VH);
     // 遠景の光（地平線グロー）
-    const glow = ctx.createRadialGradient(VW / 2, 118, 20, VW / 2, 118, 240);
+    const glow = ctx.createRadialGradient(cx, 118, 20, cx, 118, 240);
     glow.addColorStop(0, 'rgba(120,160,255,.14)');
     glow.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = glow;
@@ -692,8 +699,8 @@ window.GM = window.GM || {};
       ctx.strokeStyle = 'rgba(160,190,255,.14)';
       ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); ctx.stroke();
     };
-    plat(110 + (B.enemies.length > 1 ? (B.enemies.length - 1) * 30 : 0), 202, 34 + (B.enemies.length > 1 ? (B.enemies.length - 1) * 22 : 0), 12, 0.30);
-    plat(408, 226, 62, 14, 0.30);
+    plat(eBaseX + (B.enemies.length > 1 ? (B.enemies.length - 1) * 30 : 0), 202, 34 + (B.enemies.length > 1 ? (B.enemies.length - 1) * 22 : 0), 12, 0.30);
+    plat(pBaseX, 226, 62, 14, 0.30);
     // 大気パーティクル
     for (let i = 0; i < 14; i++) {
       const px = ((i * 97 + B.animT * 0.012 * (1 + (i % 3))) % (VW + 20)) - 10;
@@ -704,8 +711,8 @@ window.GM = window.GM || {};
     // party (right, back view)
     B.party.forEach((m, i) => {
       if (m.hp <= 0) { ctx.globalAlpha = 0.25; }
-      GM.SPRITES.drawShadow(ctx, 408, 176 + i * 30, 11);
-      GM.SPRITES.drawChibi(ctx, 402, 148 + i * 30, m.look, 'up', Math.floor(B.animT / 400) % 2 === 0 ? 0 : 1, 1.4);
+      GM.SPRITES.drawShadow(ctx, pBaseX, 176 + i * 30, 11);
+      GM.SPRITES.drawChibi(ctx, pBaseX - 6, 148 + i * 30, m.look, 'up', Math.floor(B.animT / 400) % 2 === 0 ? 0 : 1, 1.4);
       ctx.globalAlpha = 1;
     });
     // enemies
@@ -714,7 +721,7 @@ window.GM = window.GM || {};
         ctx.globalAlpha = Math.max(0, 0.35 - B.animT % 400 / 2000);
       }
       const scale = e.boss ? (e.def.final ? 2.4 : 2.2) : 1.8;
-      GM.SPRITES.drawEnemy(ctx, e.spr, 110 + e.slot * 60 + (B.enemies.length > 1 ? (e.slot - (B.enemies.length - 1) / 2) * 10 : 0), 200, scale,
+      GM.SPRITES.drawEnemy(ctx, e.spr, eBaseX + e.slot * 60 + (B.enemies.length > 1 ? (e.slot - (B.enemies.length - 1) / 2) * 10 : 0), 200, scale,
         { flash: e.flashT > 120, dx: (e.dx || 0) });
       ctx.globalAlpha = 1;
     });
@@ -722,7 +729,7 @@ window.GM = window.GM || {};
     B.enemies.forEach((e, i) => {
       if (!e.boss || e.hp <= 0) return;
       const w = 160;
-      const x = VW / 2 - w / 2, y = 12;
+      const x = cx - w / 2, y = 12;
       ctx.fillStyle = 'rgba(6,10,34,.8)';
       ctx.fillRect(x - 2, y - 2, w + 4, 10);
       ctx.fillStyle = '#1a2140';
@@ -732,7 +739,7 @@ window.GM = window.GM || {};
       ctx.fillStyle = '#cfe0ff';
       ctx.font = '9px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(`${e.name}`, VW / 2, y + 16);
+      ctx.fillText(`${e.name}`, cx, y + 16);
     });
     // popups
     B.popups.forEach((p) => {

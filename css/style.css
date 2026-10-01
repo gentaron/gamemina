@@ -50,6 +50,7 @@ html, body {
 #screen {
   position: relative;
   width: 480px; height: 304px;
+  flex: 0 0 auto;          /* flexコンテナ内での幅の押し潰しを防止 */
   transform: scale(var(--s));
   transform-origin: center center;
   z-index: 2;
@@ -59,7 +60,7 @@ html, body {
 
 canvas#game {
   position: absolute; inset: 0;
-  width: 480px; height: 304px;
+  width: 100%; height: 100%;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
   background: #000;
@@ -113,6 +114,7 @@ canvas#game {
   border: 2px solid #cfe0ff;
   box-shadow: inset 0 0 0 1px rgba(120,160,255,.35), 0 8px 22px rgba(0,0,0,.6);
   transition: border-color .2s;
+  cursor: pointer;
 }
 #dialogue.c1 { border-color: #ffb8d6; }
 #dialogue.c2 { border-color: #a8e4ff; }
@@ -340,35 +342,35 @@ canvas#game {
 }
 #title .stars { position: absolute; inset: 0; }
 #title .t-logo {
-  position: relative;
+  position: absolute; top: 24px; left: 0; right: 0;
   text-align: center;
   animation: rise 1.2s ease both;
 }
 #title .t-top { font-size: 9px; letter-spacing: .6em; color: var(--cyan); text-indent: .6em; margin-bottom: 8px; text-shadow: 0 0 8px rgba(98,214,255,.8); }
 #title .t-main {
-  font-size: 34px; font-weight: 800; letter-spacing: .12em; line-height: 1;
+  font-size: 30px; font-weight: 800; letter-spacing: .12em; line-height: 1.05;
   background: linear-gradient(180deg, #fff 20%, #ffd98a 55%, #c8871a 90%);
   -webkit-background-clip: text; background-clip: text; color: transparent;
   filter: drop-shadow(0 0 12px rgba(244,201,93,.45)) drop-shadow(0 2px 0 rgba(0,0,0,.6));
 }
 #title .t-sub {
-  margin-top: 10px; font-size: 12px; letter-spacing: .42em; color: var(--ink-dim); text-indent: .42em;
+  margin-top: 8px; font-size: 11px; letter-spacing: .42em; color: var(--ink-dim); text-indent: .42em;
 }
-#title .t-crown { margin-top: 14px; display: flex; gap: 6px; align-items: center; color: var(--gold); font-size: 8px; letter-spacing: .3em; }
+#title .t-crown { margin-top: 10px; display: flex; gap: 6px; align-items: center; justify-content: center; color: var(--gold); font-size: 8px; letter-spacing: .3em; }
 #title .t-crown::before, #title .t-crown::after { content: ""; display: block; width: 46px; height: 1px; background: linear-gradient(90deg, transparent, var(--gold-2)); }
 #title .t-crown::after { transform: scaleX(-1); }
-#title .t-menu { margin-top: 18px; display: flex; flex-direction: column; gap: 8px; align-items: center; animation: rise 1.2s .25s ease both; }
-.t-item { font-size: 12px; letter-spacing: .34em; text-indent: .34em; color: var(--ink-dim); cursor: pointer; padding: 3px 10px; }
+#title .t-menu { position: absolute; top: 150px; left: 0; right: 0; display: flex; flex-direction: column; gap: 7px; align-items: center; animation: rise 1.2s .25s ease both; }
+.t-item { font-size: 11.5px; letter-spacing: .34em; text-indent: .34em; color: var(--ink-dim); cursor: pointer; padding: 3px 10px; }
 .t-item.sel { color: #fff; text-shadow: 0 0 10px rgba(98,214,255,.9); }
 .t-item.sel::before { content: "◆ "; color: var(--cyan); }
 .t-item.dis { opacity: .35; }
 #title .t-cast {
-  position: absolute; bottom: 40px; left: 0; right: 0;
+  position: absolute; bottom: 44px; left: 0; right: 0;
   display: flex; justify-content: center; gap: 7px;
   animation: rise 1.4s .5s ease both;
 }
 #title .t-cast img {
-  width: 30px; height: 30px; object-fit: cover; object-position: top center;
+  width: 26px; height: 26px; object-fit: cover; object-position: top center;
   border-radius: 4px;
   border: 1px solid rgba(244,201,93,.55);
   box-shadow: 0 0 10px rgba(98,214,255,.18), 0 3px 10px rgba(0,0,0,.5);
@@ -376,9 +378,17 @@ canvas#game {
   opacity: .92;
 }
 #title .t-cast img:nth-child(odd) { transform: translateY(-3px); }
-#title .t-foot { position: absolute; bottom: 12px; font-size: 8px; color: #54608e; letter-spacing: .18em; text-align: center; line-height: 1.9; }
-#title .t-inst {
+#title .t-foot { position: absolute; bottom: 8px; left: 0; right: 0; font-size: 8px; color: #54608e; letter-spacing: .14em; text-align: center; line-height: 1.9; }
+#title .t-foot .t-keyhint { color: #7a88b8; }
+@media (pointer: coarse) { #title .t-foot .t-keyhint { display: none; } }
+#title .t-fs {
   position: absolute; top: 10px; right: 10px; font-size: 9px;
+  border: 1px solid var(--gold-2); color: var(--gold); border-radius: 3px; padding: 4px 8px; cursor: pointer;
+  background: rgba(20,14,2,.7); letter-spacing: .1em;
+}
+#title .t-fs:active { transform: translateY(1px); filter: brightness(1.3); }
+#title .t-inst {
+  position: absolute; top: 10px; right: 76px; font-size: 9px;
   border: 1px solid var(--gold-2); color: var(--gold); border-radius: 3px; padding: 4px 8px; cursor: pointer;
   background: rgba(20,14,2,.7); letter-spacing: .1em;
 }
