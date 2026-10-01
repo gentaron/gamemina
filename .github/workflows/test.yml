@@ -1,0 +1,35 @@
+# ============================================================
+# GAMEMINA CHRONICLE ─ 自動バグチェック CI
+# ============================================================
+# push / PR のたびに内蔵テスト環境 (38+ 項目) を実行:
+#   - マップ整合性 / ソフトロック監査（連結性 BFS）
+#   - ストーリー進行グラフ完走保証
+#   - バトル数理と過去バグの回帰テスト
+#   - セーブ/ロード循環、ショップ/アセット整合
+name: QA
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  bug-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run built-in QA suite (auto bug check)
+        run: node tests/run.mjs
+
+      - name: Result
+        if: success()
+        run: echo '✨ ALL TESTS PASSED ─ リリース判定 GREEN'

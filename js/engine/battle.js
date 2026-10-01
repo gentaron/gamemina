@@ -102,17 +102,28 @@ window.GM = window.GM || {};
       B.bg = S.map ? (S.map.floorTile || 'stone') : 'stone';
 
       // party snapshot (battleParty), revive dead members at 1hp? no: must be alive
+      if (!S.battleParty.length) S.battleParty = S.party.slice(0, Math.min(4, S.party.length));
       B.party = S.battleParty.slice(0, 4);
       if (!B.party.length) B.party = S.party.slice(0, 4);
       B.party.forEach((m) => { m.statuses = []; m.guarding = false; if (m.hp <= 0) m.hp = 1; });
 
-      B.enemies = enemyKeys.map(makeEnemy).filter(Boolean);
+      B.enemies = (enemyKeys || []).map(makeEnemy).filter(Boolean);
       B.enemies.forEach((e, i) => {
         e.slot = i;
         e.statuses = [];
       });
+      // 敵編成が空なら即時勝利（データ不備でのフリーズ防止）
+      if (!B.enemies.length) {
+        S.scene = sceneBefore;
+        $('battle-ui').classList.add('hidden');
+        GM.uiOwner = null;
+        console.warn('[Battle] 空の編成を検出 ─ 自動勝利処理');
+        resolve(true);
+        return;
+      }
 
-      GM.AUDIO.playBGM(opts.boss ? (B.enemies[0].def.final ? 'final' : 'boss') : 'battle');
+      const isFinal = B.enemies[0] && B.enemies[0].def && B.enemies[0].def.final;
+      GM.AUDIO.playBGM(opts.boss ? (isFinal ? 'final' : 'boss') : 'battle');
       GM.BatUI.buildParty();
       GM.BatUI.log('');
       if (opts.boss || B.enemies.some((e) => e.boss)) showBossIntro(B.enemies);
@@ -177,6 +188,7 @@ window.GM = window.GM || {};
   function tickRoundStatuses() {
     [...B.party, ...B.enemies].forEach((u) => {
       if (u.hp <= 0) return;
+      u.guarding = false; // ぼうぎょは1ラウンド限り（永続化バグ修正）
       u.statuses.forEach((s) => { s.turns--; });
       // poison
       const po = u.statuses.find((s) => s.id === 'poison');
@@ -221,8 +233,11 @@ window.GM = window.GM || {};
       box: 'bat-abil',
       click: (i) => {
         const ab = rows[i].ab;
+        // 対象種別に応じた選択 UI へルーティング（null ターゲットクラッシュ根本修正）
         if (ab.tgt === 'enemy') pickTarget(member, (t) => useAbility(member, ab, t));
-        else useAbility(member, ab, null);
+        else if (ab.tgt === 'ally') pickAlly(member, (t) => useAbility(member, ab, t));
+        else if (ab.tgt === 'dead') pickDeadAlly(member, (t) => useAbility(member, ab, t));
+        else useAbility(member, ab, null); // self / enemies / allies
       },
       cancel: () => playerAct(member)
     });
@@ -286,15 +301,24 @@ window.GM = window.GM || {};
     actor.mp -= ab.mp;
     GM.BatUI.updateParty();
     if (ab.kind === 'heal') {
-      const amt = ab.pow + Math.floor(actor.mag * 1.6);
-      healUnit(target, amt);
+      const amt = ab.pow + Math.floor((actor.mag || 0) * 1.6);
+      if (ab.tgt === 'allies') {
+        const ts = B.party.filter((m) => m.hp > 0);
+        ts.forEach((m) => { healUnit(m, amt); B.popups.push(makePopup(m, amt, '#7ce38b')); });
+        GM.BatUI.log(`${actor.name} の ${ab.name}！ 味方全員のHPが回復！`);
+      } else {
+        if (!target || target.hp <= 0) target = B.party.find((m) => m.hp > 0) || actor;
+        healUnit(target, amt);
+        B.popups.push(makePopup(target, amt, '#7ce38b'));
+        GM.BatUI.log(`${actor.name} の ${ab.name}！ ${target.name} のHPが回復！`);
+      }
       GM.AUDIO.sfx('heal');
-      B.popups.push(makePopup(target, amt, '#7ce38b'));
-      GM.BatUI.log(`${actor.name} の ${ab.name}！ ${target.name} のHPが回復！`);
       finishPlayer(ab);
       return;
     }
     if (ab.kind === 'revive') {
+      if (!target || target.hp > 0) target = B.party.find((m) => m.hp <= 0);
+      if (!target) { finishPlayer(ab); return; }
       target.hp = Math.floor(target.maxhp / 2);
       GM.AUDIO.sfx('revive');
       B.popups.push(makePopup(target, 'REVIVE', '#ffe066'));
@@ -303,7 +327,13 @@ window.GM = window.GM || {};
       return;
     }
     if (ab.kind === 'buff' || ab.kind === 'debuff') {
-      applyStatus(ab.tgt === 'self' ? actor : (ab.tgt === 'allies' ? null : target), ab);
+      // 対象集合を正しく解決（self / allies / enemies / 単体）
+      let ts;
+      if (ab.tgt === 'self') ts = [actor];
+      else if (ab.tgt === 'allies') ts = B.party.filter((m) => m.hp > 0);
+      else if (ab.tgt === 'enemies') ts = B.enemies.filter((e) => e.hp > 0);
+      else ts = target ? [target] : [];
+      ts.forEach((t) => { if (!ab.status || U.chance(ab.status.rate || 1)) applyStatus(t, ab); });
       GM.AUDIO.sfx(ab.kind === 'buff' ? 'buff' : 'debuff');
       GM.BatUI.log(`${actor.name} の ${ab.name}！`);
       finishPlayer(ab);
@@ -316,6 +346,8 @@ window.GM = window.GM || {};
       B.enemies.filter((e) => e.hp > 0).forEach((e) => dealAbilityDamage(actor, e, ab));
       finishPlayer(ab);
     } else {
+      if (!target || target.hp <= 0) target = B.enemies.find((e) => e.hp > 0);
+      if (!target) { finishPlayer(ab); return; }
       GM.BatUI.log(`${actor.name} の ${ab.name}！`);
       dealAbilityDamage(actor, target, ab);
       finishPlayer(ab);
@@ -493,6 +525,11 @@ window.GM = window.GM || {};
 
   /* ---------------- shared combat math ---------------- */
   function execAttack(actor, target, sk) {
+    // ターゲットが既に倒れている場合は自動リターゲット（null参照クラッシュ防止）
+    if (!target || target.hp <= 0) {
+      target = actor.isEnemy ? pickPartyTarget() : B.enemies.find((e) => e.hp > 0);
+    }
+    if (!target) { if (actor.isEnemy) setTimeout(nextTurn, 600); else finishPlayer(null); return; }
     GM.AUDIO.sfx(sk.kind === 'mag' ? 'magic' : U.chance(0.15) ? 'crit' : 'hit');
     GM.BatUI.log(`${actor.name} の ${sk.name || '攻撃'}！`);
     const dmg = calcDamage(actor, target, sk);
@@ -500,6 +537,13 @@ window.GM = window.GM || {};
     B.popups.push(makePopup(target, dmg, sk.el === 'phys' ? '#ffffff' : elColor(sk.el)));
     if (actor.isEnemy) { actor.dx = 6; }
     else { actor.dx = -6; }
+    // 付帯ステータス（毒液・ワイヤ拘束等 ─ これまで適用漏れだったバグを修正）
+    if (sk.status && U.chance(sk.status.rate || 1)) applyStatus(target, sk);
+    // 吸収（ドレイン）: 与ダメージの1/2を回復
+    if (sk.kind === 'drain') {
+      const back = Math.floor(dmg / 2);
+      if (back > 0) { healUnit(actor, back); B.popups.push(makePopup(actor, back, '#7ce38b')); }
+    }
     if (target.hp <= 0) killUnit(target);
     if (actor.isEnemy) setTimeout(nextTurn, 700);
     else finishPlayer(null);
@@ -757,6 +801,20 @@ window.GM = window.GM || {};
     if (S.fade.a > 0) {
       ctx.fillStyle = `rgba(0,0,0,${S.fade.a})`;
       ctx.fillRect(0, 0, VW, VH);
+    }
+  };
+
+  /* ---------------- test hooks (内蔵テスト環境用) ----------------
+     Node CLI / test.html / 起動時自己診断から戦闘数理を検証するための公開窓口 */
+  GM.Battle._test = {
+    calcDamage, makeEnemy, applyStatus, healUnit, damageUnit, execAttack, useAbility,
+    B,
+    /** useAbility の対象集合解決ロジック単体検証用 */
+    resolveTargets(actor, ab, target) {
+      if (ab.tgt === 'self') return [actor];
+      if (ab.tgt === 'allies') return B.party.filter((m) => m.hp > 0);
+      if (ab.tgt === 'enemies') return B.enemies.filter((e) => e.hp > 0);
+      return target ? [target] : [];
     }
   };
 

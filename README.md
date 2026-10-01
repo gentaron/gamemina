@@ -6,7 +6,9 @@
 
 *Symphony of Stars ─ A full-scale retro RPG tracing the EDU universe*
 
-`10 CHAPTERS` · `8 PARTY MEMBERS` · `20+ BOSSES` · `OFFLINE PWA`
+`10 CHAPTERS` · `8 PARTY MEMBERS` · `20+ BOSSES` · `OFFLINE PWA` · `BUILT-IN QA`
+
+[![QA](https://github.com/gentaron/gamemina/actions/workflows/test.yml/badge.svg)](https://github.com/gentaron/gamemina/actions/workflows/test.yml)
 
 </div>
 
@@ -29,6 +31,30 @@ E暦528年。歴史の継ぎ目から「歪み」が漏れ始めた世界を修�
 - **アルカイブ** ── 歴史の記録を集めるロア図鑑（20項目）
 - **完全生成のサウンド** ── WebAudioによるチップチューンBGM 10曲+効果音（音源ファイル不要）
 - **完全オフラインPWA** ── Service Workerプリキャッシュ、インストール対応、セーブは端末内+コード書き出し
+
+### 内蔵テスト環境（自動バグチェック）
+
+本作は **世界最高峰の品質保証レイヤーをゲーム本体に内蔵** しています。全38項目以上の検証が push のたびに自動実行され、破損は CI で即座に検出されます。
+
+| レイヤー | 実行環境 | 内容 |
+|---------|---------|------|
+| **自動バグチェック CI** | GitHub Actions（push/PR で自動） | `node tests/run.mjs` ─ 全データ整合性・連結性・回帰テスト |
+| **起動時自己診断** | ゲーム起動のたび | マップ/ストーリー/参照整合の致命的問題を起動 1 回で検出しコンソールへ |
+| **QA コンソール** | ブラウザ `?test=1` or `test.html` | 全テスト（UI結合含む）をグラフィカルに実行・表示 |
+| **デバッグコンソール** | `?debug=1` | FPS/座標ライブ表示、章ワープ、全回復、ゲート解禁 |
+
+テストが機械的に保証するもの:
+
+- ✅ **「出られなくなる部屋」はゼロ** ── 全15マップで BFS 連結性監査（全出入口・イベント・NPC・宝箱への到達性）
+- ✅ **ストーリー完走保証** ── 第1章→第10章→エンディングまで進行グラフを自動シミュレーション
+- ✅ **戦闘の回帰テスト** ── 回復/補助アビリティの対象解決、敵のステータス攻撃、ぼうぎょの持続など過去バグを永久封印
+- ✅ **セーブ完全性** ── スナップショット⇔復元・コード書き出しのラウンドトリップ
+- ✅ **アセット整合** ── 全ポートレート URL の実在、ショップ品揃え、BGM参照
+
+```bash
+# ローカルで実行（Node 18+）
+npm test
+```
 
 ### 起動方法
 
@@ -62,16 +88,19 @@ E暦528年。歴史の継ぎ目から「歪み」が漏れ始めた世界を修�
 ```
 gamemina/
 ├── index.html              # エントリ
+├── test.html               # 内蔵QAコンソール（全テストをブラウザで実行）
 ├── manifest.webmanifest    # PWAマニフェスト
 ├── sw.js                   # Service Worker（オフライン）
 ├── css/style.css           # UIシステム
 ├── js/
 │   ├── audio.js            # WebAudio チップチューン
 │   ├── sprites.js          # ドット絵/タイル描画
-│   ├── main.js             # 起動・ループ
+│   ├── main.js             # 起動・ループ・自己診断
 │   ├── data/               # ゲームデータ（キャラ/敵/マップ/ストーリー）
-│   └── engine/             # コア/戦闘/フィールド/メニュー/セーブ
-└── icons/                  # PWAアイコン
+│   ├── engine/             # コア/戦闘/フィールド/メニュー/セーブ/debug
+│   └── tests/              # ★内蔵テスト環境（QAハーネス/UI結合/コンソール）
+├── tests/run.mjs           # Node CLI ランナー（CI が実行）
+└── .github/workflows/      # 自動バグチェック CI
 ```
 
 ### 関連リポジトリ
@@ -91,6 +120,7 @@ gamemina/
 - Procedural chiptune (WebAudio), pixel-art rendering, zero build step
 - Character portraits are **URL-indexed** from [gentaron/image](https://github.com/gentaron/image) (dialogue, battle cut-ins, menu, in-game cast gallery) with runtime service-worker caching for offline play
 - Full offline PWA: service worker precache, installable, localStorage saves + export codes
+- **Built-in QA environment**: 38+ automated checks (map connectivity / soft-lock audit / story completion / battle regression tests / save round-trip) run on every push via GitHub Actions — open `test.html` or append `?test=1` in-browser to run the full suite graphically, `?debug=1` for the dev overlay
 
 **Play:** open `index.html` in any modern browser, or install it as a PWA. Keyboard (arrows/WASD + Z/X), touch D-pad, and gamepad are supported.
 

@@ -99,9 +99,51 @@ window.GM = window.GM || {};
   /* ---------------- boot ---------------- */
   function boot() {
     GM.normalizeMaps();
+
+    /* ---- 起動時自己診断（内蔵テスト環境） ----
+       データ整合性の致命的問題を起動 1 回で検出し、開発者に通知する。
+       プレイヤー体験は損なわない（失敗は console とトースト 1 回のみ）。 */
+    let bootQA = null;
+    try {
+      if (GM.QA) {
+        bootQA = GM.QA.bootCheck();
+        if (!bootQA.ok) {
+          console.error('[QA] 起動時自己診断で異常を検出:', bootQA.errors);
+          setTimeout(() => GM.toast('⚠ 内部整合性チェックで異常（詳細はコンソール）', true), 1500);
+        } else {
+          console.log(`[QA] 起動時自己診断 OK ─ ${bootQA.checked} 項目`);
+        }
+      }
+    } catch (e) { console.warn('[QA] bootCheck 例外', e); }
+
     GM.AUDIO.loadSettings();
     GM.startLoop();
     GM.toTitle();
+
+    /* ---- URL パラメータハンドリング ---- */
+    try {
+      const params = new URLSearchParams(location.search);
+      // ?debug=1 → デバッグコンソール
+      if (params.get('debug') === '1' && GM.Debug) GM.Debug.enable();
+      else {
+        let dbg = null; try { dbg = localStorage.getItem('gm_debug'); } catch (e) {}
+        if (dbg === '1' && GM.Debug) GM.Debug.enable();
+      }
+      // ?test=1 → 内蔵 QA コンソールを自動オープン
+      if (params.get('test') === '1' && GM.QA && GM.QA.openConsole) {
+        setTimeout(() => GM.QA.openConsole(true), 400);
+      }
+      // ?action=continue（PWA ショートカット）→ オートセーブから直接再開
+      if (params.get('action') === 'continue' && GM.saveMeta('auto')) {
+        setTimeout(() => {
+          if (GM.state.scene !== 'title') return;
+          if (GM.loadGame('auto')) {
+            document.getElementById('title').classList.add('hidden');
+            GM.startField();
+          }
+        }, 250);
+      }
+    } catch (e) { console.warn('URL param handling failed', e); }
 
     // unlock audio on first gesture
     const unlockOnce = () => { GM.AUDIO.unlock(); };

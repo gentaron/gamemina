@@ -538,3 +538,60 @@ canvas#game {
 @media (max-width: 560px) {
   #screen { box-shadow: none; }
 }
+
+/* ---- menu slot save/load buttons ---- */
+.slot-row { align-items: center; }
+.slot-btns { display: flex; gap: 6px; flex: 0 0 auto; }
+.slot-btn {
+  font-size: 8px; letter-spacing: .12em; padding: 3px 8px;
+  border: 1px solid #4a5f9e; border-radius: 3px; color: var(--ink);
+  background: rgba(20, 30, 66, .8); cursor: pointer; user-select: none;
+}
+.slot-btn:hover { border-color: var(--cyan); color: var(--cyan); }
+.slot-btn.load { border-color: #6a5a2e; color: var(--gold); }
+.slot-btn.load:hover { border-color: var(--gold); }
+
+/* ============================================================
+   内蔵 QA コンソール (?test=1 / test.html)
+   ============================================================ */
+.qa-console {
+  position: fixed; inset: 0; z-index: 9999;
+  display: none; flex-direction: column;
+  background: linear-gradient(180deg, rgba(4,6,16,.97), rgba(8,12,30,.99));
+  color: #eaf1ff; font-family: "Hiragino Kaku Gothic ProN","Noto Sans JP",monospace,sans-serif;
+  font-size: 12px; padding: 14px; overflow: hidden;
+}
+.qa-console.open { display: flex; }
+.qa-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.qa-title { font-size: 15px; letter-spacing: .18em; color: #ffd94a; text-shadow: 0 0 12px rgba(244,201,93,.4); }
+.qa-ver { color: #62d6ff; font-size: 10px; }
+.qa-actions { display: flex; gap: 8px; }
+.qa-btn {
+  padding: 6px 14px; font-size: 11px; letter-spacing: .1em; cursor: pointer;
+  color: #eaf1ff; background: rgba(20,30,66,.9); border: 1px solid #4a5f9e; border-radius: 4px;
+}
+.qa-btn:hover { border-color: #62d6ff; color: #62d6ff; }
+.qa-summary { margin: 10px 0; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.qa-badge { padding: 5px 12px; border-radius: 4px; font-size: 12px; letter-spacing: .12em; border: 1px solid; }
+.qa-badge.green { color: #7ce38b; border-color: #2fae4a; background: rgba(20,80,40,.25); }
+.qa-badge.red { color: #ff5a5a; border-color: #8f1f2d; background: rgba(80,20,30,.3); }
+.qa-counts { color: #9fb0d8; font-size: 11px; }
+.qa-counts b.red { color: #ff5a5a; }
+.qa-body { flex: 1; overflow-y: auto; border: 1px solid #1b2340; border-radius: 6px; padding: 8px; background: rgba(3,5,14,.6); }
+.qa-running { padding: 20px; text-align: center; color: #9fb0d8; }
+.qa-suite { margin-bottom: 10px; border: 1px solid #1b2340; border-radius: 5px; overflow: hidden; }
+.qa-suite.bad { border-color: #6a2030; }
+.qa-suite-head {
+  padding: 7px 10px; font-weight: bold; letter-spacing: .06em;
+  background: rgba(16,22,50,.9); display: flex; justify-content: space-between; gap: 8px;
+}
+.qa-suite-meta { font-weight: normal; color: #9fb0d8; font-size: 10px; }
+.qa-row { display: flex; gap: 8px; padding: 4px 12px; border-top: 1px solid rgba(27,35,64,.6); align-items: baseline; }
+.qa-row.fail { background: rgba(80,20,30,.18); }
+.qa-row .qa-msg { display: block; font-size: 10px; color: #9fb0d8; margin-top: 1px; }
+.qa-row .qa-msg.red { color: #ff8a8a; }
+.qa-ic { flex: 0 0 auto; width: 14px; text-align: center; }
+.qa-ic.green { color: #7ce38b; } .qa-ic.red { color: #ff5a5a; }
+.qa-ic.amber { color: #ffe066; } .qa-ic.dim { color: #44507a; }
+.red { color: #ff5a5a; } .green { color: #7ce38b; } .amber { color: #ffe066; } .dim { color: #44507a; }
+.qa-foot { margin-top: 8px; color: #44507a; font-size: 10px; text-align: center; }

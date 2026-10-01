@@ -2,33 +2,23 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
-<title>GAMEMINA CHRONICLE ─ 星々の交響曲</title>
-<meta name="description" content="Eternal Dominion Universe をなぞる本格ファンタジーRPG。10章の物語、8人の仲間、次元を越えるボスたち。完全オフライン対応PWA。">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QA CONSOLE | GAMEMINA CHRONICLE</title>
+<meta name="robots" content="noindex">
 <meta name="theme-color" content="#0b0e1a">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="GAMEMINA">
-<link rel="manifest" href="manifest.webmanifest">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="icon" href="./icons/favicon.png" type="image/png">
 <link rel="stylesheet" href="css/style.css">
-<link rel="preconnect" href="https://raw.githubusercontent.com">
 </head>
 <body>
 <div id="app">
+  <!-- ゲーム本体（UI 結合テストの対象として完全な DOM を構成） -->
   <div id="screen">
     <canvas id="game" width="480" height="304"></canvas>
     <div id="ui" aria-live="polite">
-
-      <!-- HUD (field) -->
       <div id="hud" class="hidden">
         <div id="hud-chapter" class="hud-chip"></div>
         <div id="hud-right"><span id="hud-token" class="hud-chip"></span><button id="btn-fs" class="hud-btn" aria-label="フルスクリーン" title="フルスクリーン切替 (F)">⛶</button><button id="btn-menu" class="hud-btn" aria-label="メニュー" title="メニューを開く (C)">☰<span class="lbl">MENU</span></button></div>
       </div>
-
-      <!-- Dialogue -->
       <div id="dialogue" class="hidden">
         <div id="dlg-portrait" class="hidden"><img id="dlg-img" alt=""></div>
         <div id="dlg-body">
@@ -37,11 +27,7 @@
         </div>
         <div id="dlg-next" class="hidden">▼</div>
       </div>
-
-      <!-- Choice list (field events) -->
       <div id="choice" class="hidden"></div>
-
-      <!-- Battle UI -->
       <div id="battle-ui" class="hidden">
         <div id="bat-log" class="win"></div>
         <div id="bat-party"></div>
@@ -50,14 +36,9 @@
         <div id="bat-item" class="win hidden"></div>
         <div id="bat-target" class="win hidden"></div>
       </div>
-
-      <!-- Menu overlay -->
       <div id="menu" class="hidden"></div>
-      <!-- Shop overlay -->
       <div id="shop" class="hidden"></div>
-      <!-- Save / system overlay -->
       <div id="system-ui" class="hidden"></div>
-      <!-- Boss cut-in -->
       <div id="boss-intro" class="hidden">
         <div id="boss-intro-band"></div>
         <img id="boss-intro-img" alt="">
@@ -66,15 +47,10 @@
           <div id="boss-intro-sub"></div>
         </div>
       </div>
-
-      <!-- Chapter card -->
       <div id="chapter-card" class="hidden"></div>
-      <!-- Title screen -->
       <div id="title" class="hidden"></div>
-      <!-- Toasts -->
       <div id="toasts"></div>
     </div>
-    <!-- Touch controls -->
     <div id="touch" class="hidden">
       <div id="dpad">
         <button data-dir="up" class="tb tb-u" aria-label="上">▲</button>
@@ -92,6 +68,7 @@
   <div id="offline-banner" class="hidden">⚠ オフライン ─ キャッシュから動作中</div>
 </div>
 
+<!-- ゲームエンジン一式（index.html と同一順序） -->
 <script src="js/audio.js"></script>
 <script src="js/data/enemyart.js"></script>
 <script src="js/data/portraits.js"></script>
@@ -110,9 +87,17 @@
 <script src="js/engine/field.js"></script>
 <script src="js/engine/battle.js"></script>
 <script src="js/engine/menu.js"></script>
-<script src="js/engine/debug.js"></script>
+<!-- QA ハーネス + UI 結合テスト + コンソール -->
 <script src="js/tests/harness.js"></script>
+<script src="js/tests/ui.tests.js"></script>
 <script src="js/tests/console.js"></script>
+<!-- ゲームブート（タイトル画面構築まで行い、UI テストの対象にする） -->
 <script src="js/main.js"></script>
+<script>
+  window.addEventListener('load', () => {
+    GM.normalizeMaps();
+    GM.QA.openConsole(true);
+  });
+</script>
 </body>
 </html>

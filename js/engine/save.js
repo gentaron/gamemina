@@ -92,7 +92,8 @@ window.GM = window.GM || {};
       archive: [...s.archive],
       opened: { ...s.opened },
       killed: { ...s.killed },
-      loc: { map: s.mapId, x: s.player.x, y: s.player.y, dir: s.player.dir }
+      loc: s.loc ? { ...s.loc }
+        : { map: s.mapId, x: s.player.x, y: s.player.y, dir: s.player.dir }
     };
   }
   function restore(data) {

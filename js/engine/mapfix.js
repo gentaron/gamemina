@@ -101,6 +101,48 @@ window.GM = window.GM || {};
       }
     });
 
+    /* ---- セーブ結晶とセーブイベントの視覚同期 ----
+       イベントが主連結成分へリロケートされた場合、'S' タイル（結晶の見た目）も
+       イベント位置へ移動させる。密室に取り残された結晶（見えない・届かない）を
+       構造的に排除し、「結晶がある＝そこでセーブできる」を全マップで保証する。 */
+    {
+      const OVERWRITE_FLOOR = new Set(['.', 'g', 'f', 'd', 'n', 'i', 'k', 'W', 'M', 'B', 'v']);
+      const saveEvts = (def.events || []).filter((e) => e.type === 'save');
+      const used = new Set();
+      saveEvts.forEach((e) => {
+        const cur = tile(e.x, e.y);
+        if (cur !== 'S') {
+          if (OVERWRITE_FLOOR.has(cur)) {
+            const row = def.map[e.y];
+            def.map[e.y] = row.substring(0, e.x) + 'S' + row.substring(e.x + 1);
+          } else {
+            // 特殊タイル上なら隣の平床へ退避してから結晶を置く
+            for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+              const nx = e.x + dx, ny = e.y + dy;
+              if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+              if (OVERWRITE_FLOOR.has(tile(nx, ny)) && !used.has(nx + ',' + ny)) {
+                e.x = nx; e.y = ny;
+                const row = def.map[ny];
+                def.map[ny] = row.substring(0, nx) + 'S' + row.substring(nx + 1);
+                break;
+              }
+            }
+          }
+        }
+        used.add(e.x + ',' + e.y);
+        occupied.add(e.x + ',' + e.y); // 後続の宝箱リロケートが結晶位置を潰さないように
+      });
+      // 使われなくなった S タイル（密室の結晶など）を床に戻す
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          if (tile(x, y) === 'S' && !used.has(x + ',' + y)) {
+            const row = def.map[y];
+            def.map[y] = row.substring(0, x) + '.' + row.substring(x + 1);
+          }
+        }
+      }
+    }
+
     /* npcs */
     (def.npcs || []).forEach((n) => {
       if (solid(n.x, n.y) || !main.has(n.x + ',' + n.y) || occupied.has(n.x + ',' + n.y)) {

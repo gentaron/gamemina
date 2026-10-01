@@ -33,42 +33,42 @@ GM.WEAPONS = {
   w_layla2: { name: 'プラズマ・グローブ', atk: 12, price: 480, char: 'layla' },
   w_layla3: { name: 'ナノファイバー・ガントレット', atk: 24, price: 1500, char: 'layla' },
   w_layla4: { name: '100トン・インパクト', atk: 40, price: 4200, char: 'layla' },
-  w_layla5: { name: 'ヴォルテック・カタラクト', atk: 62, price: 0, char: 'layla' },
+  w_layla5: { name: 'ヴォルテック・カタラクト', atk: 62, price: 8800, char: 'layla' },
   w_gentaro1: { name: '冒険者の刃', atk: 4, price: 100, char: 'gentaro' },
   w_gentaro2: { name: '討伐屋の長剣', atk: 11, price: 450, char: 'gentaro' },
   w_gentaro3: { name: 'エリートブレード', atk: 22, price: 1400, char: 'gentaro' },
   w_gentaro4: { name: '曙光の刀', atk: 38, price: 4000, char: 'gentaro' },
-  w_gentaro5: { name: '煌刃アマツ', atk: 58, price: 0, char: 'gentaro' },
+  w_gentaro5: { name: '煌刃アマツ', atk: 58, price: 8600, char: 'gentaro' },
   w_mina1: { name: '見習いのロッド', atk: 2, mag: 5, price: 100, char: 'mina' },
   w_mina2: { name: 'フォージ・ロッド', atk: 3, mag: 12, price: 460, char: 'mina' },
   w_mina3: { name: '境界のスタッフ', atk: 5, mag: 22, price: 1400, char: 'mina' },
   w_mina4: { name: 'ペルセポネ・セプター', atk: 8, mag: 36, price: 4000, char: 'mina' },
-  w_mina5: { name: '創世のヴォール', atk: 12, mag: 54, price: 0, char: 'mina' },
+  w_mina5: { name: '創世のヴォール', atk: 12, mag: 54, price: 8400, char: 'mina' },
   w_jen1: { name: 'ヴァロリアの剣', atk: 5, price: 120, char: 'jen' },
   w_jen2: { name: '統治者のセイバー', atk: 13, price: 500, char: 'jen' },
   w_jen3: { name: '白銀のレイピア', atk: 26, price: 1600, char: 'jen' },
   w_jen4: { name: '夜明けのプロミネンス', atk: 44, price: 4600, char: 'jen' },
-  w_jen5: { name: 'ドーンブレイカー・真', atk: 66, price: 0, char: 'jen' },
+  w_jen5: { name: 'ドーンブレイカー・真', atk: 66, price: 9000, char: 'jen' },
   w_ayaka1: { name: 'ハンターのトンファー', atk: 5, price: 120, char: 'ayaka' },
   w_ayaka2: { name: '潮打つの十手', atk: 13, price: 500, char: 'ayaka' },
   w_ayaka3: { name: '深海のヌンチャク', atk: 25, price: 1600, char: 'ayaka' },
   w_ayaka4: { name: '渦潮のシンセ', atk: 42, price: 4600, char: 'ayaka' },
-  w_ayaka5: { name: '海皇のロッド・改', atk: 62, price: 0, char: 'ayaka' },
+  w_ayaka5: { name: '海皇のロッド・改', atk: 62, price: 8800, char: 'ayaka' },
   w_myu1: { name: '探査用の短剣', atk: 5, price: 120, char: 'myu' },
   w_myu2: { name: '遺跡のフォイル', atk: 13, price: 500, char: 'myu' },
   w_myu3: { name: 'エメラルド・セイバー', atk: 26, price: 1600, char: 'myu' },
   w_myu4: { name: '光剣ルミナ', atk: 44, price: 4600, char: 'myu' },
-  w_myu5: { name: '星剣ディープダイヴ', atk: 64, price: 0, char: 'myu' },
+  w_myu5: { name: '星剣ディープダイヴ', atk: 64, price: 9000, char: 'myu' },
   w_iris1: { name: '仕込みダガー', atk: 5, price: 120, char: 'iris' },
   w_iris2: { name: 'ブルーワイヤ・クロー', atk: 13, price: 500, char: 'iris' },
   w_iris3: { name: '紫電のステレット', atk: 26, price: 1600, char: 'iris' },
   w_iris4: { name: '黒蝶のダイスブレード', atk: 44, price: 4600, char: 'iris' },
-  w_iris5: { name: 'ヴァーミリオン・エッジ', atk: 64, price: 0, char: 'iris' },
+  w_iris5: { name: 'ヴァーミリオン・エッジ', atk: 64, price: 8800, char: 'iris' },
   w_casteria1: { name: '跳躍者のダガー', atk: 4, mag: 4, price: 120, char: 'casteria' },
   w_casteria2: { name: '風読のダガー', atk: 6, mag: 10, price: 500, char: 'casteria' },
   w_casteria3: { name: '星詠みのロッド', atk: 8, mag: 20, price: 1600, char: 'casteria' },
   w_casteria4: { name: '予知のオーブスタッフ', atk: 11, mag: 34, price: 4600, char: 'casteria' },
-  w_casteria5: { name: '跳界のディメンショナー', atk: 14, mag: 52, price: 0, char: 'casteria' }
+  w_casteria5: { name: '跳界のディメンショナー', atk: 14, mag: 52, price: 8600, char: 'casteria' }
 };
 /* armor: def/mdf 加算（全員共通） */
 GM.ARMORS = {
@@ -77,7 +77,7 @@ GM.ARMORS = {
   a3: { name: 'ガード・ベスト', def: 15, mdf: 9, price: 980 },
   a4: { name: 'A籍式防護服', def: 24, mdf: 16, price: 2600 },
   a5: { name: '次元装甲ヴァラー', def: 38, mdf: 26, price: 6800 },
-  a6: { name: '星衣シンフォニー', def: 52, mdf: 38, price: 0 }
+  a6: { name: '星衣シンフォニー', def: 52, mdf: 38, price: 9800 }
 };
 /* acc: 全員共通 */
 GM.ACCS = {

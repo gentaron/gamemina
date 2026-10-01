@@ -250,8 +250,19 @@ window.GM = window.GM || {};
   /* ---------------- Shop ---------------- */
   GM.openShop = function (shopLevel) {
     return new Promise((res) => {
+      // ショップ中は入力権限を店に限定（フィールド側の二重入力バグ修正）
+      const prevOwner = GM.uiOwner;
+      GM.uiOwner = 'shop';
       let closed = false;
-      const finish = () => { if (!closed) { closed = true; box.classList.add('hidden'); res(); } };
+      const finish = () => {
+        if (!closed) {
+          closed = true;
+          box.classList.add('hidden');
+          GM.uiOwner = prevOwner;
+          GM.Input.clear(); // 残入力で意図しない決定が再発火しないようクリア
+          res();
+        }
+      };
       const stock = [];
       const maxLvl = shopLevel;
       for (let l = 0; l <= Math.min(9, maxLvl); l++) {

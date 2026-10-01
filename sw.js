@@ -8,7 +8,7 @@
    ============================================================ */
 'use strict';
 
-const VERSION = 'v1.3.0';
+const VERSION = 'v1.4.0';
 const CACHE_NAME = `gamemina-chronicle-${VERSION}`;
 const IMG_CACHE = `gamemina-images-${VERSION}`;
 const IMG_ORIGIN = 'https://raw.githubusercontent.com';
@@ -36,6 +36,10 @@ const OFFLINE_URLS = [
   './js/engine/field.js',
   './js/engine/battle.js',
   './js/engine/menu.js',
+  './js/engine/debug.js',
+  './js/tests/harness.js',
+  './js/tests/console.js',
+  './test.html',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/maskable-192.png',

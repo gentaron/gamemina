@@ -195,7 +195,31 @@ window.GM = window.GM || {};
       }
       case 'セーブ': {
         detail.appendChild(el('div', 'menu-title', 'SAVE / LOAD'));
-        GM.SaveDialog.renderInto(detail, null);
+        detail.appendChild(el('div', 'sys-note', '「SAVE」でそのスロットに保存／「LOAD」で再開。AUTOは章クリア時の自動セーブ。'));
+        ['auto', '1', '2', '3'].forEach((slot) => {
+          const meta = GM.saveMeta(slot);
+          const label = slot === 'auto' ? 'AUTO' : `SLOT ${slot}`;
+          const info = meta
+            ? `第${meta.chapter}章 / Lv${meta.lv} / ${U.fmt(meta.tg)}nTG / ${new Date(meta.ts).toLocaleString('ja-JP')}`
+            : '─ 空 ─';
+          const row = el('div', 'slot-row');
+          row.innerHTML = `<span>${esc(label)} ─ ${esc(info)}</span>`;
+          const btns = el('span', 'slot-btns');
+          const bS = el('span', 'slot-btn', 'SAVE');
+          bS.addEventListener('click', (e) => { e.stopPropagation(); GM.saveGame(slot); render(); });
+          btns.appendChild(bS);
+          if (meta) {
+            const bL = el('span', 'slot-btn load', 'LOAD');
+            bL.addEventListener('click', (e) => {
+              e.stopPropagation();
+              if (GM.loadGame(slot)) { close(); GM.startField(); GM.toast('ロードしました'); }
+              else GM.toast('ロードに失敗しました', true);
+            });
+            btns.appendChild(bL);
+          }
+          row.appendChild(btns);
+          detail.appendChild(row);
+        });
         break;
       }
       case '設定': {
@@ -340,6 +364,10 @@ window.GM = window.GM || {};
 
   /* ---------------- keyboard nav ---------------- */
   function activateTab() { render(); }
+  function memberCount() {
+    const order = S.battleParty.length ? S.battleParty : S.party.slice(0, 4);
+    return Math.max(1, order.length);
+  }
   function navLoop() {
     if (GM.uiOwner !== 'menu') return;
     const b = GM.Input.consume();
@@ -349,8 +377,8 @@ window.GM = window.GM || {};
         if (b === 'up') { tabIdx = (tabIdx + TABS.length - 1) % TABS.length; GM.AUDIO.sfx('cursor'); render(); }
         else if (b === 'down') { tabIdx = (tabIdx + 1) % TABS.length; GM.AUDIO.sfx('cursor'); render(); }
         else if (b === 'a') { GM.AUDIO.sfx('confirm'); }
-        else if (b === 'left') { memberIdx = (memberIdx + 3) % 4; GM.AUDIO.sfx('cursor'); render(); }
-        else if (b === 'right') { memberIdx = (memberIdx + 1) % 4; GM.AUDIO.sfx('cursor'); render(); }
+        else if (b === 'left') { memberIdx = (memberIdx + memberCount() - 1) % memberCount(); GM.AUDIO.sfx('cursor'); render(); }
+        else if (b === 'right') { memberIdx = (memberIdx + 1) % memberCount(); GM.AUDIO.sfx('cursor'); render(); }
       }
     }
     requestAnimationFrame(navLoop);

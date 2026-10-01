@@ -208,11 +208,45 @@ window.GM = window.GM || {};
     S.cam.y = camAxis(S.player.py || S.player.y * TILE - VH / 2 + TILE / 2, S.map._h * TILE, VH);
   };
 
+  /* ---------------- safe landing (自己修復ランディング) ----------------
+   指定座標が壁・虚空・踏み込みイベント上なら、最寄りの安全な床へ BFS で退避。
+   旧セーブとの互換・マップ改修時のソフトロックを構造的に排除する */
+  GM.safeLanding = function (map, x, y) {
+    if (!map || !map.map) return { x: x || 0, y: y || 0 };
+    const w = map._w || Math.max(...map.map.map((r) => r.length));
+    const h = map._h || map.map.length;
+    const stepEv = (tx, ty) => (map.events || []).some((e) =>
+      e.x === tx && e.y === ty && (e.type === 'exit' || e.type === 'gate' || e.type === 'gate2' || e.type === 'boss'));
+    const inb = (tx, ty) => tx >= 0 && ty >= 0 && tx < w && ty < h;
+    const ok = (tx, ty) => inb(tx, ty) && !GM.isSolid(map, tx, ty) && !stepEv(tx, ty);
+    if (ok(x, y)) return { x, y };
+    // 始点が範囲外ならクランプして探索開始
+    const sx = U.clamp(x | 0, 0, w - 1), sy = U.clamp(y | 0, 0, h - 1);
+    if (ok(sx, sy)) return { x: sx, y: sy };
+    const seen = new Set([sx + ',' + sy]);
+    const q = [[sx, sy]];
+    while (q.length) {
+      const [cx, cy] = q.shift();
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nx = cx + dx, ny = cy + dy, k = nx + ',' + ny;
+        if (!inb(nx, ny) || seen.has(k)) continue;
+        seen.add(k);
+        if (ok(nx, ny)) return { x: nx, y: ny };
+        if (!GM.isSolid(map, nx, ny)) q.push([nx, ny]); // 歩行可能だがイベント上 → さらに探索
+      }
+    }
+    return (map.entry) ? { x: map.entry.x, y: map.entry.y } : { x: sx, y: sy };
+  };
+
   GM.startField = function () {
     if (S.loc && S.loc.map) {
       GM.loadMap(S.loc.map);
-      S.player.x = S.loc.x; S.player.y = S.loc.y; S.player.dir = S.loc.dir || 'down';
+      // セーブ時の位置が現行マップで歩行不能になっている場合の自己修復
+      const fix = GM.safeLanding(S.map, S.loc.x, S.loc.y);
+      S.player.x = fix.x; S.player.y = fix.y; S.player.dir = S.loc.dir || 'down';
+      S.loc = { map: S.mapId, x: fix.x, y: fix.y, dir: S.player.dir };
     }
+    S.player.px = S.player.x * TILE; S.player.py = S.player.y * TILE;
     if (!S.battleParty.length) S.battleParty = S.party.slice(0, Math.min(4, S.party.length));
     S.scene = 'field';
     $('hud').classList.remove('hidden');
@@ -312,9 +346,12 @@ window.GM = window.GM || {};
         break;
       case 'exit': {
         GM.AUDIO.sfx('confirm');
-        const [to] = ev.to;
+        const to = ev.to[0];
         const dst = GM.MAPS[to];
-        const ent = (dst && dst.entry) || { x: 1, y: 1 };
+        if (!dst) { console.warn('[exit] 行き先マップが存在しません:', to); break; }
+        // 指定座標を尊重（指定がなければマップの entry）。到達不能なら安全地点へ自動補正
+        let ent = (ev.to.length >= 3) ? { x: ev.to[1], y: ev.to[2] } : (dst.entry || { x: 1, y: 1 });
+        ent = GM.safeLanding(dst, ent.x, ent.y);
         S.loc = { map: to, x: ent.x, y: ent.y, dir: S.player.dir };
         GM.loadMap(to);
         S.player.x = ent.x; S.player.y = ent.y;
@@ -392,10 +429,10 @@ window.GM = window.GM || {};
 
   function startRandomEncounter() {
     const table = GM.FORMATIONS[S.map.encounters];
-    if (!table) return;
+    if (!table || !table.length) return;
     const formation = U.pick(table);
     GM.AUDIO.sfx('encounter');
-    GM.Battle.run(formation, {});
+    GM.Battle.run(formation, { noEscape: !!S.map.noEscape });
   }
 
   function updateField(dt) {
@@ -616,4 +653,5 @@ window.GM = window.GM || {};
   }
 
   GM.Field = { update: updateField, render: renderField };
+  GM._SOLID = SOLID; // 内蔵テスト環境からの連結性検証用
 })(window.GM);

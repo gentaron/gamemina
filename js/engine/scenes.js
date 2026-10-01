@@ -53,6 +53,8 @@ window.GM = window.GM || {};
             GM.learnAt(m);
           }
           S.party.push(m);
+          // 参入した仲間は自動で出撃メンバーに入る（最大4人。旧: 手動入れ替え必須）
+          if (S.battleParty.length < 4) S.battleParty.push(m);
           syncBattleParty();
         }
         return true;
@@ -106,10 +108,15 @@ window.GM = window.GM || {};
       case 'wait': { await GM.wait(step.ms || 500); return true; }
       case 'warp': {
         GM.loadMap(step.map);
-        const ent = (GM.MAPS[step.map] && GM.MAPS[step.map].entry) || { x: 1, y: 1 };
+        const def = GM.MAPS[step.map];
+        // スクリプト指定座標を尊重（無指定や到達不能時は安全地点へ自動補正）
+        let ent = (step.x != null && step.y != null) ? { x: step.x, y: step.y }
+          : (def && def.entry) || { x: 1, y: 1 };
+        ent = GM.safeLanding(def, ent.x, ent.y);
         S.player.x = ent.x; S.player.y = ent.y;
         S.player.px = ent.x * 16; S.player.py = ent.y * 16;
         S.player.dir = 'down';
+        S.loc = { map: step.map, x: ent.x, y: ent.y, dir: 'down' };
         GM.centerCam();
         GM.updateHUD();
         return true;
