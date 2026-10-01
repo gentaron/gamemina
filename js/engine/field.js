@@ -9,7 +9,7 @@
 'use strict';
 window.GM = window.GM || {};
 (function (GM) {
-  const U = GM.U, S = GM.state;
+  const U = GM.U, S = GM.state, $ = GM.$;
   const TILE = 16; // ビューポート (GM.VW/GM.VH) は動的（fitScreen が画面比に合わせ拡張）
 
   /* tile solidity（'T'=茨は通過不可） */
@@ -145,6 +145,19 @@ window.GM = window.GM || {};
         c.fillText(String(ev.gate), lx, ly);
       });
     }
+    /* 出口ポータルの床ルーン（静的ベース）: exit イベント位置に焼き込む */
+    (def.events || []).forEach((ev) => {
+      if (ev.type !== 'exit') return;
+      const px = ev.x * TILE, py = ev.y * TILE;
+      const cx = px + TILE / 2, cy = py + TILE / 2;
+      c.fillStyle = 'rgba(8,26,38,.60)';
+      c.beginPath(); c.arc(cx, cy, 7.5, 0, Math.PI * 2); c.fill();
+      c.strokeStyle = 'rgba(130,235,255,.55)'; c.lineWidth = 1;
+      c.beginPath(); c.arc(cx, cy, 7.5, 0, Math.PI * 2); c.stroke();
+      c.beginPath(); c.arc(cx, cy, 4.5, 0, Math.PI * 2); c.stroke();
+      c.fillStyle = 'rgba(170,245,255,.30)';
+      c.fillRect(px + 7, py + 1, 2, 14); c.fillRect(px + 1, py + 7, 14, 2);
+    });
     return cv;
   }
   function invalidateBake(mapId) { bakeCache.delete(mapId); }
@@ -205,6 +218,19 @@ window.GM = window.GM || {};
     $('hud').classList.remove('hidden');
     GM.centerCam();
     GM.updateHUD();
+    // 初回ヒント: ☰MENU / ⛶全画面 の案内（1回のみ）+ 未使用ならMENUボタンをパルス
+    try {
+      const mb = $('btn-menu');
+      if (!localStorage.getItem('gm_hint_ui')) {
+        localStorage.setItem('gm_hint_ui', '1');
+        setTimeout(() => {
+          GM.toast('右上の ☰ MENU：装備・セーブ等／⛶：全画面表示', true);
+          if (mb && !localStorage.getItem('gm_menu_used')) mb.classList.add('pulse');
+        }, 900);
+      } else if (mb && !localStorage.getItem('gm_menu_used')) {
+        mb.classList.add('pulse');
+      }
+    } catch (e) {}
     return true;
   };
 
@@ -435,6 +461,98 @@ window.GM = window.GM || {};
     return ['up', 'down', 'left', 'right'].some((k) => GM.Input.held[k]);
   }
 
+  /* ---------------- exit portal ---------------- */
+  function drawExitPortal(ctx, sx, sy, t) {
+    const pl = Math.sin(t / 13) * 0.5 + 0.5;
+    // 光柱（上に伸びる）
+    const g = ctx.createLinearGradient(0, sy - 16, 0, sy + 16);
+    g.addColorStop(0, 'rgba(98,214,255,0)');
+    g.addColorStop(1, `rgba(98,214,255,${0.16 + pl * 0.10})`);
+    ctx.fillStyle = g;
+    ctx.fillRect(sx + 3, sy - 16, 10, 32);
+    // クリスタル本体
+    ctx.fillStyle = `rgba(110,205,245,${0.78 + pl * 0.2})`;
+    ctx.fillRect(sx + 6, sy + 4, 4, 7);
+    ctx.fillRect(sx + 5, sy + 6, 6, 4);
+    ctx.fillStyle = `rgba(225,252,255,${0.85 + pl * 0.15})`;
+    ctx.fillRect(sx + 7, sy + 2, 2, 9);
+    ctx.fillRect(sx + 6, sy + 3, 4, 2);
+    // 浮遊▼（踏み込み地点を示す）
+    const ay = sy - 7 - Math.round(pl * 2);
+    ctx.fillStyle = `rgba(140,235,255,${0.7 + pl * 0.3})`;
+    ctx.fillRect(sx + 5, ay + 2, 6, 2);
+    ctx.fillRect(sx + 6, ay + 4, 4, 1);
+    ctx.fillRect(sx + 7, ay + 5, 2, 1);
+  }
+
+  /* ---------------- portal labels / edge arrows ---------------- */
+  function portalLabel(ev) {
+    if (ev.type === 'exit') {
+      const dst = GM.MAPS[ev.to && ev.to[0]];
+      if (!dst) return null;
+      return dst.id === 'hub' ? '▶ リミナル・フォージ' : '▶ ' + dst.name;
+    }
+    if (ev.type === 'gate' && ev.gate) {
+      const ch = GM.CHAPTERS && GM.CHAPTERS[ev.gate];
+      if (!S.gates[ev.gate]) return '第' + ev.gate + '章ゲート（未起動）';
+      return ch ? ('▶ 第' + ev.gate + '章「' + ch.name + '」') : ('▶ 第' + ev.gate + '章');
+    }
+    if (ev.type === 'gate2') return '▶ ？？？';
+    return null;
+  }
+
+  function drawPortalLabels(ctx, map, camX, camY, VW, VH) {
+    (map.events || []).forEach((ev) => {
+      if (ev.type !== 'exit' && ev.type !== 'gate' && ev.type !== 'gate2') return;
+      const d = Math.abs(ev.x - S.player.x) + Math.abs(ev.y - S.player.y);
+      if (d > 5) return;
+      const text = portalLabel(ev);
+      if (!text) return;
+      const sx = ev.x * TILE - camX + 8, sy = ev.y * TILE - camY;
+      if (sx < -20 || sx > VW + 20 || sy < 10 || sy > VH + 10) return;
+      ctx.font = 'bold 8px monospace';
+      ctx.textAlign = 'center';
+      const w = Math.ceil(ctx.measureText(text).width) + 10;
+      let bx = sx - w / 2, by = sy - 24;
+      bx = Math.max(2, Math.min(VW - w - 2, bx));
+      if (by < 2) by = 2;
+      ctx.fillStyle = 'rgba(4,8,24,.86)';
+      ctx.fillRect(bx, by, w, 12);
+      ctx.strokeStyle = ev.type === 'exit' ? 'rgba(120,235,255,.9)' : 'rgba(255,217,74,.9)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(bx + 0.5, by + 0.5, w - 1, 11);
+      ctx.fillStyle = ev.type === 'exit' ? '#bff4ff' : '#ffe9a0';
+      ctx.fillText(text, bx + w / 2, by + 9);
+    });
+  }
+
+  function drawPortalArrows(ctx, map, camX, camY, VW, VH) {
+    const pl = Math.sin(S.tick / 12) * 0.5 + 0.5;
+    (map.events || []).forEach((ev) => {
+      if (ev.type !== 'exit' && ev.type !== 'gate') return;
+      if (ev.type === 'gate' && !S.gates[ev.gate]) return; // 未起動ゲートは案内しない
+      const cx = ev.x * TILE + 8 - camX, cy = ev.y * TILE + 8 - camY;
+      const m = 14;
+      if (cx > m && cx < VW - m && cy > m && cy < VH - m) return; // 画面内なら不要
+      const ax = Math.max(m, Math.min(VW - m, cx));
+      const ay = Math.max(m, Math.min(VH - m, cy));
+      const ang = Math.atan2(cy - ay, cx - ax);
+      const rgb = ev.type === 'exit' ? '98,214,255' : '255,217,74';
+      ctx.save();
+      ctx.translate(ax, ay);
+      ctx.rotate(ang);
+      ctx.globalAlpha = 0.55 + pl * 0.45;
+      ctx.fillStyle = `rgba(${rgb},.92)`;
+      ctx.beginPath();
+      ctx.moveTo(7, 0); ctx.lineTo(-4, -5); ctx.lineTo(-4, 5); ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = `rgba(${rgb},1)`; ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.restore();
+    });
+    ctx.globalAlpha = 1;
+  }
+
   /* ---------------- render ---------------- */
   function renderField(ctx) {
     const VW = GM.VW, VH = GM.VH;
@@ -454,6 +572,12 @@ window.GM = window.GM || {};
         if (ANIMATED.has(type)) GM.SPRITES.drawTile(ctx, type, tx, ty, S.tick, 7);
       }
     }
+    // 出口ポータル（点滅クリスタル + 光柱 + ルーン）
+    (map.events || []).forEach((ev) => {
+      if (ev.type !== 'exit') return;
+      const sx = ev.x * TILE - camX, sy = ev.y * TILE - camY;
+      if (sx > -24 && sy > -24 && sx < VW + 24 && sy < VH + 24) drawExitPortal(ctx, sx, sy, S.tick);
+    });
     // opened chests look
     (map.chests || []).forEach((c) => {
       const key = S.mapId + ':' + c.x + ',' + c.y;
@@ -480,6 +604,10 @@ window.GM = window.GM || {};
     GM.SPRITES.drawChibi(ctx, psx + 2, psy - 1, pc.look, S.player.dir, S.player.frame, 1);
     // vignette
     ctx.drawImage(getVignette(), 0, 0);
+    // ポータル行き先ラベル（近くで表示）
+    drawPortalLabels(ctx, map, camX, camY, VW, VH);
+    // 画面外ポータルへの方向矢印
+    drawPortalArrows(ctx, map, camX, camY, VW, VH);
     // fade
     if (S.fade.a > 0) {
       ctx.fillStyle = `rgba(0,0,0,${S.fade.a})`;

@@ -15,6 +15,12 @@ window.GM = window.GM || {};
 
   function open() {
     if (S.scene !== 'field') return;
+    // 初回使用でパルス解除・記録（三本線=MENU の発見性改善）
+    try {
+      localStorage.setItem('gm_menu_used', '1');
+      const b = document.getElementById('btn-menu');
+      if (b) b.classList.remove('pulse');
+    } catch (e) {}
     GM.uiOwner = 'menu';
     mode = 'tabs'; tabIdx = 0; memberIdx = 0;
     GM.AUDIO.sfx('open');
