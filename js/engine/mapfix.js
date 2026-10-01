@@ -8,7 +8,7 @@
 'use strict';
 window.GM = window.GM || {};
 (function (GM) {
-  const SOLID = new Set(['#', ' ', 'w', 't', 'r', 'c', 'C', 'b', 'p', 'm', 'x', 'o', '*']);
+  const SOLID = new Set(['#', ' ', 'w', 't', 'r', 'c', 'C', 'b', 'p', 'm', 'x', 'o', '*', 'T']);
 
   function normalizeMap(def) {
     const rows = def.map;
@@ -69,6 +69,22 @@ window.GM = window.GM || {};
 
     /* events */
     def.events = (def.events || []).filter((e) => e.type !== 'chest'); // chest はタイル '*' + chests定義で処理
+
+    /* saveイベントは 'S' タイルにスナップ（クリスタルと実体の不一致防止） */
+    const sTiles = [];
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (tile(x, y) === 'S') sTiles.push([x, y]);
+    const snapOccupied = new Set();
+    (def.events || []).forEach((e) => {
+      if (e.type !== 'save' || !sTiles.length) return;
+      let bd = Infinity, bs = null;
+      sTiles.forEach(([sx, sy]) => {
+        if (snapOccupied.has(sx + ',' + sy)) return;
+        const d = Math.abs(sx - e.x) + Math.abs(sy - e.y);
+        if (d < bd) { bd = d; bs = [sx, sy]; }
+      });
+      if (bs) { e.x = bs[0]; e.y = bs[1]; snapOccupied.add(bs[0] + ',' + bs[1]); }
+    });
+
     (def.events || []).forEach((e) => {
       const walkable = ['boss', 'exit', 'gate', 'gate2', 'save', 'shop', 'trigger'];
       if (walkable.includes(e.type)) {

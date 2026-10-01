@@ -86,6 +86,7 @@ gamemina/
 - Lore-faithful boss battles: Executor, Titan Rex, Celia, Ronan Arthur, Slime Core / Slime Woman, Grim Dalgos, Vaeron Deaxus, Fiona, Golden Venom, Possessed Ken, Minotaur Lv230, Abyssal Reais, Omega-Ulyssis, and the first DIANA
 - Hidden superboss: Lv1008 Succubus / post-clear Celia duel
 - Procedural chiptune (WebAudio), pixel-art rendering, zero build step
+- Character portraits are **URL-indexed** from [gentaron/image](https://github.com/gentaron/image) (dialogue, battle cut-ins, menu, in-game cast gallery) with runtime service-worker caching for offline play
 - Full offline PWA: service worker precache, installable, localStorage saves + export codes
 
 **Play:** open `index.html` in any modern browser, or install it as a PWA. Keyboard (arrows/WASD + Z/X), touch D-pad, and gamepad are supported.

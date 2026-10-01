@@ -215,6 +215,7 @@ window.GM = window.GM || {};
         ── GAMEMINA CHRONICLE ──<br>
         Star Symphony of the Eternal Dominion Universe<br><br>
         Original Lore: EDU Text (gentaron/edutext)<br>
+        Character Art: gentaron/image (URL indexed)<br>
         Game: GAMEMINA Project<br>
         Thank you for playing!
       </div>
@@ -263,6 +264,15 @@ window.GM = window.GM || {};
     GM.AUDIO.playBGM('title');
     const box = $('title');
     const hasSave = ['1', '2', '3'].some((s) => GM.saveMeta(s)) || !!GM.saveMeta('auto');
+    // キャラポートレートストリップ（URL索引）
+    let castHtml = '';
+    if (GM.Portraits) {
+      GM.Portraits.warm();
+      ['layla', 'gentaro', 'mina', 'jen', 'ayaka', 'myu', 'iris', 'casteria'].forEach((id) => {
+        const url = GM.Portraits.url(id);
+        if (url) castHtml += `<img src="${url}" alt="" loading="lazy" onerror="this.style.display='none'">`;
+      });
+    }
     box.innerHTML = `
       <div class="t-logo">
         <div class="t-top">ETERNAL DOMINION RPG</div>
@@ -271,8 +281,9 @@ window.GM = window.GM || {};
         <div class="t-crown">SYMPHONY OF STARS</div>
       </div>
       <div class="t-menu" id="t-menu"></div>
+      <div class="t-cast" id="t-cast">${castHtml}</div>
       <div class="t-foot">10 CHAPTERS / 8 PARTY MEMBERS / OFFLINE PWA<br>
-        Based on Eternal Dominion Universe lore</div>
+        Based on Eternal Dominion Universe lore ─ Character art: github.com/gentaron/image</div>
       <div class="t-inst hidden" id="t-install">⬇ インストール</div>`;
     box.classList.remove('hidden');
 

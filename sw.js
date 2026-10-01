@@ -8,8 +8,10 @@
    ============================================================ */
 'use strict';
 
-const VERSION = 'v1.0.0';
+const VERSION = 'v1.1.0';
 const CACHE_NAME = `gamemina-chronicle-${VERSION}`;
+const IMG_CACHE = `gamemina-images-${VERSION}`;
+const IMG_ORIGIN = 'https://raw.githubusercontent.com';
 const OFFLINE_URLS = [
   './',
   './index.html',
@@ -19,12 +21,15 @@ const OFFLINE_URLS = [
   './js/sprites.js',
   './js/main.js',
   './js/data/abilities.js',
+  './js/data/enemyart.js',
   './js/data/items.js',
   './js/data/characters.js',
   './js/data/enemies.js',
   './js/data/maps.js',
+  './js/data/portraits.js',
   './js/data/story.js',
   './js/engine/core.js',
+  './js/engine/mapfix.js',
   './js/engine/ui.js',
   './js/engine/save.js',
   './js/engine/scenes.js',
@@ -95,6 +100,20 @@ self.addEventListener('fetch', (event) => {
       const cached = await cache.match(req);
       const fetchPromise = fetch(req).then((res) => {
         if (res && res.ok) cache.put(req, res.clone());
+        return res;
+      }).catch(() => undefined);
+      return cached || (await fetchPromise) || new Response('', { status: 504 });
+    })());
+    return;
+  }
+
+  // キャライラスト (raw.githubusercontent.com): cache-first + 背景更新 → オフラインでも表示
+  if (req.url.startsWith(IMG_ORIGIN) && req.destination === 'image') {
+    event.respondWith((async () => {
+      const cache = await caches.open(IMG_CACHE);
+      const cached = await cache.match(req);
+      const fetchPromise = fetch(req).then((res) => {
+        if (res && (res.ok || res.type === 'opaque')) cache.put(req, res.clone());
         return res;
       }).catch(() => undefined);
       return cached || (await fetchPromise) || new Response('', { status: 504 });

@@ -9,15 +9,45 @@ window.GM = window.GM || {};
 
   /* ---------------- Dialogue ---------------- */
   const Dlg = {
-    el: null, nameEl: null, textEl: null, nextEl: null,
+    el: null, nameEl: null, textEl: null, nextEl: null, portEl: null, imgEl: null,
     queue: [], typing: false, full: '', idx: 0, timer: null, resolve: null,
     init() {
       this.el = $('dialogue'); this.nameEl = $('dlg-name');
       this.textEl = $('dlg-text'); this.nextEl = $('dlg-next');
+      this.portEl = $('dlg-portrait'); this.imgEl = $('dlg-img');
+    },
+    /* ポートレート設定（URL索引 / 失敗時フォールバック） */
+    _setPortrait(name, accent) {
+      const pid = GM.Portraits ? GM.Portraits.speakerId(name) : null;
+      this.portEl.classList.remove('show');
+      if (!pid) { this.portEl.classList.add('hidden'); return; }
+      const url = GM.Portraits.url(pid);
+      const ch = GM.CHARACTERS[pid];
+      const applyFallback = () => {
+        const fb = ch && GM.Portraits.fallbackDataURL(ch.look);
+        if (fb) {
+          this.imgEl.classList.add('fallback');
+          this.imgEl.src = fb;
+          this.portEl.classList.remove('hidden');
+          requestAnimationFrame(() => this.portEl.classList.add('show'));
+        } else this.portEl.classList.add('hidden');
+      };
+      if (url) {
+        this.imgEl.classList.remove('fallback');
+        this.imgEl.onerror = applyFallback;
+        this.imgEl.alt = name;
+        this.imgEl.src = url;
+        this.portEl.classList.remove('hidden');
+        requestAnimationFrame(() => this.portEl.classList.add('show'));
+      } else applyFallback();
+      // 名 plate のアクセント
+      this.el.classList.remove('c1', 'c2');
+      if (accent) this.el.classList.add(accent);
     },
     show(name, text, accent) {
       return new Promise((res) => {
         this.el.classList.remove('hidden');
+        this._setPortrait(name, accent);
         if (name) {
           this.nameEl.textContent = name;
           this.nameEl.classList.remove('hidden');
@@ -113,7 +143,12 @@ window.GM = window.GM || {};
       GM.state.battleParty.forEach((m, i) => {
         const row = el('div', 'bmember');
         row.id = 'bm-' + i;
+        const purl = GM.Portraits ? GM.Portraits.url(m.id) : null;
+        const thumb = purl
+          ? `<img class="bthumb" src="${purl}" alt="" loading="lazy" onerror="this.style.display='none'">`
+          : '<span class="bthumb"></span>';
         row.innerHTML = `
+          ${thumb}
           <span class="nm">${esc(m.name)}</span>
           <span class="bbar bhp"><i></i></span>
           <span class="val hp"></span>

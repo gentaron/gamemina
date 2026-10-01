@@ -172,6 +172,7 @@ window.GM = window.GM || {};
     });
   };
   GM.wait = (ms) => new Promise((res) => setTimeout(res, ms));
+  GM.tickNow = () => state.tick;
 
   /* ---------------- helpers ---------------- */
   GM.$ = (id) => document.getElementById(id);

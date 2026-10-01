@@ -31,6 +31,57 @@ window.GM = window.GM || {};
     };
   }
 
+  /* ---------------- boss cut-in (URL索引ポートレート) ---------------- */
+  function bossIntroImage(key) {
+    // 1) イラストリポジトリのポートレート
+    if (GM.Portraits && GM.Portraits.ENEMIES[key]) {
+      const im = GM.Portraits.get(key);
+      if (im) return { src: im.src, art: true };
+      // 未ロードなら非同期で後から差し替え（pixelを一旦出す）
+    }
+    // 2) フォールバック: ドット絵を拡大
+    const def = GM.ENEMIES[key];
+    if (def && GM.ENEMY_ART[def.spr]) {
+      const size = GM.SPRITES.enemySize(def.spr, 1);
+      const cv = document.createElement('canvas');
+      cv.width = size.w; cv.height = size.h;
+      const c = cv.getContext('2d');
+      GM.SPRITES.drawEnemy(c, def.spr, size.w / 2, size.h, 1, {});
+      return { src: cv.toDataURL(), art: false };
+    }
+    return null;
+  }
+  function showBossIntro(enemies) {
+    const boss = enemies.find((e) => e.boss);
+    if (!boss) return;
+    const box = $('boss-intro'), img = $('boss-intro-img'), nm = $('boss-intro-name'), sub = $('boss-intro-sub');
+    if (!box) return;
+    nm.textContent = boss.name;
+    sub.textContent = boss.def.final ? '── FINAL BATTLE ──' : '── BOSS BATTLE ──';
+    box.classList.remove('art');
+    const info = bossIntroImage(boss.key);
+    if (info) {
+      img.src = info.src;
+      box.classList.toggle('art', !!info.art);
+      box.classList.remove('hidden');
+      box.classList.remove('run');
+      void box.offsetWidth;
+      box.classList.add('run');
+      // イラストが後から届いたら差し替え
+      if (GM.Portraits && GM.Portraits.ENEMIES[boss.key]) {
+        GM.Portraits.fetch(boss.key, (im) => {
+          if (im && !box.classList.contains('hidden')) {
+            img.src = im.src;
+            box.classList.add('art');
+            box.classList.remove('run'); void box.offsetWidth; box.classList.add('run');
+          }
+        });
+      }
+      clearTimeout(showBossIntro._t);
+      showBossIntro._t = setTimeout(() => box.classList.add('hidden'), 1700);
+    }
+  }
+
   /* ---------------- run (public) ---------------- */
   B.run = function (enemyKeys, opts) {
     opts = opts || {};
@@ -63,6 +114,7 @@ window.GM = window.GM || {};
       GM.AUDIO.playBGM(opts.boss ? (B.enemies[0].def.final ? 'final' : 'boss') : 'battle');
       GM.BatUI.buildParty();
       GM.BatUI.log('');
+      if (opts.boss || B.enemies.some((e) => e.boss)) showBossIntro(B.enemies);
       B.round = 0;
       nextRound();
     });
@@ -620,10 +672,35 @@ window.GM = window.GM || {};
     grad.addColorStop(0, th[0]); grad.addColorStop(1, th[1]);
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, VW, VH);
+    // 遠景の光（地平線グロー）
+    const glow = ctx.createRadialGradient(VW / 2, 118, 20, VW / 2, 118, 240);
+    glow.addColorStop(0, 'rgba(120,160,255,.14)');
+    glow.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, VW, 150);
+    // 地平線
+    ctx.fillStyle = 'rgba(160,190,255,.10)';
+    ctx.fillRect(0, 118, VW, 1);
     // ground grid
     ctx.strokeStyle = 'rgba(120,150,255,.08)';
     for (let x = 0; x < VW; x += 32) { ctx.beginPath(); ctx.moveTo(x, 120); ctx.lineTo(x, VH); ctx.stroke(); }
     for (let y = 120; y < VH; y += 24) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(VW, y); ctx.stroke(); }
+    // プラットフォーム（敵陣・味方陣）
+    const plat = (cx, cy, rx, ry, a) => {
+      ctx.fillStyle = `rgba(0,0,0,${a})`;
+      ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = 'rgba(160,190,255,.14)';
+      ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); ctx.stroke();
+    };
+    plat(110 + (B.enemies.length > 1 ? (B.enemies.length - 1) * 30 : 0), 202, 34 + (B.enemies.length > 1 ? (B.enemies.length - 1) * 22 : 0), 12, 0.30);
+    plat(408, 226, 62, 14, 0.30);
+    // 大気パーティクル
+    for (let i = 0; i < 14; i++) {
+      const px = ((i * 97 + B.animT * 0.012 * (1 + (i % 3))) % (VW + 20)) - 10;
+      const py = 40 + ((i * 53) % 200) + Math.sin(B.animT / 700 + i) * 6;
+      ctx.fillStyle = `rgba(180,210,255,${0.05 + (i % 4) * 0.03})`;
+      ctx.fillRect(px, py, 2, 2);
+    }
     // party (right, back view)
     B.party.forEach((m, i) => {
       if (m.hp <= 0) { ctx.globalAlpha = 0.25; }

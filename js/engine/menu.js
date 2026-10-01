@@ -8,7 +8,7 @@ window.GM = window.GM || {};
   const U = GM.U, $ = GM.$, el = GM.el, esc = GM.esc;
   const S = GM.state;
 
-  const TABS = ['アイテム', 'スキル', '装備', 'ステータス', 'パーティ', 'アルカイブ', 'セーブ', '設定'];
+  const TABS = ['アイテム', 'スキル', '装備', 'ステータス', 'パーティ', 'アルカイブ', 'キャラ図鑑', 'セーブ', '設定'];
   let tabIdx = 0, memberIdx = 0, mode = 'tabs'; // tabs | member | list
   let listRows = [], listIdx = 0;
   let onSaveDone = null;
@@ -58,9 +58,11 @@ window.GM = window.GM || {};
     const order = S.battleParty.length ? S.battleParty : S.party.slice(0, 4);
     order.forEach((m, i) => {
       const row = el('div', 'pmrow' + (i === memberIdx ? ' sel' : ''));
-      row.innerHTML = `<span>${esc(m.name)}</span><span>Lv${m.lv}</span>
-        <div style="grid-column:1/3"><div class="hpmini"><i style="width:${U.pct(m.hp, m.maxhp) * 100}%"></i></div>
-        <div class="mpmini"><i style="width:${U.pct(m.mp, m.maxmp) * 100}%"></i></div></div>`;
+      const purl = GM.Portraits ? GM.Portraits.url(m.id) : null;
+      const thumb = purl ? `<img class="pthumb" src="${purl}" alt="" loading="lazy" onerror="this.style.display='none'">` : '';
+      row.innerHTML = `${thumb}<span class="pcol"><span class="pline"><span>${esc(m.name)}</span><span>Lv${m.lv}</span></span>
+        <div class="hpmini"><i style="width:${U.pct(m.hp, m.maxhp) * 100}%"></i></div>
+        <div class="mpmini"><i style="width:${U.pct(m.mp, m.maxmp) * 100}%"></i></div></span>`;
       winP.appendChild(row);
     });
     winP.innerHTML += `<div class="sys-note">C: メニューを閉じる</div>`;
@@ -134,9 +136,17 @@ window.GM = window.GM || {};
         break;
       }
       case 'ステータス': {
-        detail.appendChild(el('div', 'mname', `${esc(m.name)} <span style="font-size:8px;color:var(--ink-dim)">（${esc(m.full)}）</span>`));
-        detail.appendChild(el('div', 'mjob', `${esc(m.title)} ─ ${esc(m.job)}`));
-        detail.appendChild(el('div', 'mlv', `Lv ${m.lv}　EXP ${U.fmt(m.exp)} / 次 ${U.fmt(Math.max(0, GM.expTotal(m.lv + 1) - m.exp))}`));
+        const purl = GM.Portraits ? GM.Portraits.url(m.id) : null;
+        const head = el('div', 'stat-head');
+        head.innerHTML = `
+          <div class="stat-port">${purl ? `<img src="${purl}" alt="" onerror="this.parentNode.classList.add('noimg')">` : ''}</div>
+          <div class="stat-id">
+            <div class="mname">${esc(m.name)}</div>
+            <div class="mjob">${esc(m.title)} ─ ${esc(m.job)}</div>
+            <div class="mlv">Lv ${m.lv}</div>
+          </div>`;
+        detail.appendChild(head);
+        detail.appendChild(el('div', 'sys-note', `${esc(m.full)}　EXP ${U.fmt(m.exp)} / 次 ${U.fmt(Math.max(0, GM.expTotal(m.lv + 1) - m.exp))}`));
         const grid = el('div', 'mstat-grid');
         [['HP', `${m.hp}/${m.maxhp}`], ['MP', `${m.mp}/${m.maxmp}`],
           ['攻撃', m.atk], ['防御', m.def], ['魔力', m.mag], ['魔防', m.mdf],
@@ -171,6 +181,10 @@ window.GM = window.GM || {};
       }
       case 'アルカイブ': {
         renderArchive(detail);
+        break;
+      }
+      case 'キャラ図鑑': {
+        renderCast(detail);
         break;
       }
       case 'セーブ': {
@@ -240,6 +254,29 @@ window.GM = window.GM || {};
     });
     const got = S.archive.length;
     detail.appendChild(el('div', 'sys-note', `記録 ${got}/${GM.ARCHIVE.length} ─ 歴史をなぞるほど、世界の記憶が集まる。`));
+  }
+
+  /* ---- キャラ図鑑: gentaron/image リポジトリのURL索引ギャラリー ---- */
+  function renderCast(detail) {
+    const P = GM.Portraits;
+    detail.appendChild(el('div', 'menu-title', 'CAST ─ キャラ図鑑'));
+    detail.appendChild(el('div', 'sys-note', `Eternal Dominion Universe の登場人物 ${P.INDEX.length}人 ─ イラストは gentaron/image からURL索引`));
+    const grid = el('div', 'cast-grid');
+    // パーティメンバーを先頭に
+    const files = [];
+    Object.keys(P.CHARS).forEach((k) => { if (!files.includes(P.CHARS[k])) files.push(P.CHARS[k]); });
+    P.INDEX.forEach((f) => { if (!files.includes(f)) files.push(f); });
+    files.forEach((f) => {
+      const card = el('div', 'cast-card');
+      const label = P.labelOf(f);
+      const known = Object.keys(P.LABELS).some((k) => P.LABELS[k] === label);
+      card.innerHTML = `
+        <img src="${P.BASE}${f}.png" alt="${esc(label)}" loading="lazy"
+             onerror="this.parentNode.classList.add('err')">
+        <span class="cast-name${known ? ' known' : ''}">${esc(label)}</span>`;
+      grid.appendChild(card);
+    });
+    detail.appendChild(grid);
   }
 
   GM.Menu.showArchiveOnly = function () {

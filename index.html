@@ -14,6 +14,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <link rel="stylesheet" href="css/style.css">
+<link rel="preconnect" href="https://raw.githubusercontent.com">
 </head>
 <body>
 <div id="app">
@@ -29,8 +30,11 @@
 
       <!-- Dialogue -->
       <div id="dialogue" class="hidden">
-        <div id="dlg-name" class="hidden"></div>
-        <div id="dlg-text"></div>
+        <div id="dlg-portrait" class="hidden"><img id="dlg-img" alt=""></div>
+        <div id="dlg-body">
+          <div id="dlg-name" class="hidden"></div>
+          <div id="dlg-text"></div>
+        </div>
         <div id="dlg-next" class="hidden">▼</div>
       </div>
 
@@ -53,6 +57,16 @@
       <div id="shop" class="hidden"></div>
       <!-- Save / system overlay -->
       <div id="system-ui" class="hidden"></div>
+      <!-- Boss cut-in -->
+      <div id="boss-intro" class="hidden">
+        <div id="boss-intro-band"></div>
+        <img id="boss-intro-img" alt="">
+        <div id="boss-intro-caption">
+          <div id="boss-intro-name"></div>
+          <div id="boss-intro-sub"></div>
+        </div>
+      </div>
+
       <!-- Chapter card -->
       <div id="chapter-card" class="hidden"></div>
       <!-- Title screen -->
@@ -80,6 +94,7 @@
 
 <script src="js/audio.js"></script>
 <script src="js/data/enemyart.js"></script>
+<script src="js/data/portraits.js"></script>
 <script src="js/sprites.js"></script>
 <script src="js/data/abilities.js"></script>
 <script src="js/data/items.js"></script>
