@@ -1,2 +1,16 @@
-skills/
+# 環境変数・シークレット
+.env
+.env.*
+*.pem
+
+# Netlify
+.netlify/
+
+# 依存関係
 node_modules/
+
+# その他
+skills/
+*.log
+.DS_Store
+Thumbs.db

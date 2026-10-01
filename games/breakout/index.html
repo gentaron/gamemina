@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ブロック崩し | GameMina</title>
+  <meta name="description" content="パドルでボールを弾き、54個のネオンブロックをすべて崩せ。">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=DotGothic16&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    body { --ga: var(--neon-pink); }
+    canvas {
+      background: rgba(10, 10, 24, 0.9);
+      border: 1.5px solid var(--neon-pink);
+      border-radius: 14px;
+      box-shadow: 0 0 24px rgba(255, 45, 120, 0.25), inset 0 0 30px rgba(255, 45, 120, 0.05);
+      max-width: 100%;
+      touch-action: none;
+      cursor: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="scanlines" aria-hidden="true"></div>
+
+  <header class="site-header">
+    <div class="wrap game-topbar" style="height:auto">
+      <a class="link-home" href="/">&larr; HOME</a>
+      <button id="muteBtn" class="btn-mute" type="button">SOUND ON</button>
+    </div>
+  </header>
+
+  <main class="wrap game-page">
+    <div class="game-heading">
+      <h1>ブロック崩し</h1>
+      <p class="sub">BREAKOUT — ボールひとつでネオンの壁を崩し切れ</p>
+    </div>
+
+    <div class="hud">
+      <div class="hud-chip"><span class="label">SCORE</span><span class="value" id="scoreVal">0</span></div>
+      <div class="hud-chip"><span class="label">LIVES</span><span class="value" id="lifeVal">3</span></div>
+      <div class="hud-chip"><span class="label">BLOCKS</span><span class="value" id="blockVal">54</span></div>
+      <div class="hud-chip"><span class="label">BEST</span><span class="value" id="bestVal">--</span></div>
+    </div>
+
+    <div class="stage">
+      <canvas id="cv" width="480" height="380" aria-label="ブロック崩しの盤面"></canvas>
+      <div class="overlay" id="ovStart">
+        <p class="ov-title">BREAKOUT</p>
+        <p class="ov-text">マウス / 指でパドルを動かしてボールを弾く</p>
+        <button class="btn-neon" id="btnStart" type="button">START</button>
+      </div>
+      <div class="overlay hidden" id="ovOver">
+        <p class="ov-title">GAME OVER</p>
+        <p class="ov-stats" id="overStats"></p>
+        <p class="ov-text" id="overMsg"></p>
+        <button class="btn-neon" id="btnRetry" type="button">RETRY</button>
+      </div>
+      <div class="overlay hidden" id="ovClear">
+        <p class="ov-title">ALL CLEAR!</p>
+        <p class="ov-stats" id="clearStats"></p>
+        <p class="ov-text" id="clearMsg"></p>
+        <button class="btn-neon" id="btnAgain" type="button">RETRY</button>
+      </div>
+    </div>
+
+    <section class="howto">
+      <h2>HOW TO PLAY</h2>
+      <ul>
+        <li>マウス移動または指のスワイプでパドルを操作。</li>
+        <li>1ブロック10点。上部のブロックほど高得点（30点）。</li>
+        <li>ボールを落とすと残機を1つ失う。残機3で全54ブロックの崩壊を目指せ。</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap footer-inner">
+      <p>&copy; 2026 GameMina / gentaron</p>
+      <p class="footer-note">Static site hosted on Netlify</p>
+    </div>
+  </footer>
+
+  <script src="/js/sfx.js"></script>
+  <script>
+  (function () {
+    'use strict';
+    var W = 480, H = 380;
+    var ROWS = 6, COLS = 9, BW = 46, BH = 16, GAP = 4, TOP = 40, LEFT = 13;
+    var ROW_COLORS = ['#ff2d78', '#ff8c1a', '#ffe600', '#39ff14', '#00e5ff', '#b26bff'];
+
+    var cv = document.getElementById('cv');
+    var ctx = cv.getContext('2d');
+    var scoreVal = document.getElementById('scoreVal');
+    var lifeVal = document.getElementById('lifeVal');
+    var blockVal = document.getElementById('blockVal');
+    var bestVal = document.getElementById('bestVal');
+    var ovStart = document.getElementById('ovStart');
+    var ovOver = document.getElementById('ovOver');
+    var ovClear = document.getElementById('ovClear');
+    var overStats = document.getElementById('overStats');
+    var overMsg = document.getElementById('overMsg');
+    var clearStats = document.getElementById('clearStats');
+    var clearMsg = document.getElementById('clearMsg');
+
+    var paddle, ball, bricks, score, lives, alive, rafId = null, running = false;
+
+    function loadBest() { var v = parseInt(localStorage.getItem('gm_best_breakout'), 10); return isNaN(v) ? 0 : v; }
+    function showBest() { var b = loadBest(); bestVal.textContent = b > 0 ? b + '' : '--'; }
+
+    function buildBricks() {
+      bricks = [];
+      for (var r = 0; r < ROWS; r++) {
+        for (var c = 0; c < COLS; c++) {
+          bricks.push({ r: r, c: c, x: LEFT + c * (BW + GAP), y: TOP + r * (BH + GAP), hit: false });
+        }
+      }
+    }
+
+    function resetBall() {
+      ball = { x: W / 2, y: H - 60, dx: 0, dy: 0, r: 5.5, stuck: true, speed: 3.6 };
+    }
+
+    function resetAll() {
+      paddle = { x: W / 2 - 40, w: 80, h: 10, y: H - 26 };
+      score = 0; lives = 3; alive = true;
+      buildBricks();
+      resetBall();
+      scoreVal.textContent = '0';
+      lifeVal.textContent = '3';
+      blockVal.textContent = String(ROWS * COLS);
+    }
+
+    function launch() {
+      if (!ball.stuck) return;
+      ball.stuck = false;
+      var angle = (-65 - Math.random() * 50) * Math.PI / 180;
+      ball.dx = Math.cos(angle) * ball.speed;
+      ball.dy = Math.sin(angle) * ball.speed;
+    }
+
+    function loop() {
+      if (!running) return;
+      update();
+      draw();
+      rafId = requestAnimationFrame(loop);
+    }
+
+    function update() {
+      if (ball.stuck) {
+        ball.x = paddle.x + paddle.w / 2;
+        ball.y = paddle.y - ball.r - 1;
+        return;
+      }
+      ball.x += ball.dx;
+      ball.y += ball.dy;
+
+      if (ball.x - ball.r < 0) { ball.x = ball.r; ball.dx = -ball.dx; SFX.bounce(); }
+      if (ball.x + ball.r > W) { ball.x = W - ball.r; ball.dx = -ball.dx; SFX.bounce(); }
+      if (ball.y - ball.r < 0) { ball.y = ball.r; ball.dy = -ball.dy; SFX.bounce(); }
+
+      /* パドル衝突 */
+      if (ball.dy > 0 && ball.y + ball.r >= paddle.y && ball.y + ball.r <= paddle.y + paddle.h &&
+          ball.x >= paddle.x - ball.r && ball.x <= paddle.x + paddle.w + ball.r) {
+        var rel = (ball.x - (paddle.x + paddle.w / 2)) / (paddle.w / 2);
+        var angle = rel * 60 * Math.PI / 180;
+        var sp = Math.min(Math.hypot(ball.dx, ball.dy) * 1.015, 7);
+        ball.dx = Math.sin(angle) * sp;
+        ball.dy = -Math.abs(Math.cos(angle) * sp);
+        SFX.bounce();
+      }
+
+      /* ブロック衝突 */
+      for (var i = 0; i < bricks.length; i++) {
+        var b = bricks[i];
+        if (b.hit) continue;
+        if (ball.x + ball.r > b.x && ball.x - ball.r < b.x + BW &&
+            ball.y + ball.r > b.y && ball.y - ball.r < b.y + BH) {
+          b.hit = true;
+          var pts = (ROWS - b.r) >= 5 ? 30 : 10 + (ROWS - 1 - b.r) * 4;
+          score += pts;
+          scoreVal.textContent = score;
+          blockVal.textContent = bricks.filter(function (x) { return !x.hit; }).length;
+          SFX.brick();
+          var overlapX = Math.min(ball.x + ball.r - b.x, b.x + BW - (ball.x - ball.r));
+          var overlapY = Math.min(ball.y + ball.r - b.y, b.y + BH - (ball.y - ball.r));
+          if (overlapX < overlapY) ball.dx = -ball.dx; else ball.dy = -ball.dy;
+          if (bricks.every(function (x) { return x.hit; })) return clearAll();
+          break;
+        }
+      }
+
+      /* 落下 */
+      if (ball.y - ball.r > H) {
+        lives--;
+        lifeVal.textContent = lives;
+        if (lives <= 0) return gameOver();
+        SFX.die();
+        resetBall();
+      }
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, W, H);
+
+      bricks.forEach(function (b) {
+        if (b.hit) return;
+        ctx.fillStyle = ROW_COLORS[b.r];
+        ctx.shadowColor = ROW_COLORS[b.r];
+        ctx.shadowBlur = 8;
+        ctx.fillRect(b.x, b.y, BW, BH);
+        ctx.fillStyle = 'rgba(255,255,255,.25)';
+        ctx.fillRect(b.x, b.y, BW, 3);
+      });
+      ctx.shadowBlur = 0;
+
+      ctx.fillStyle = '#00e5ff';
+      ctx.shadowColor = '#00e5ff';
+      ctx.shadowBlur = 14;
+      ctx.fillRect(paddle.x, paddle.y, paddle.w, paddle.h);
+
+      ctx.beginPath();
+      ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffffff';
+      ctx.shadowColor = '#ffffff';
+      ctx.shadowBlur = 16;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+
+    function gameOver() {
+      running = false;
+      SFX.over();
+      var best = loadBest();
+      if (score > best) {
+        localStorage.setItem('gm_best_breakout', String(score));
+        overMsg.textContent = 'NEW RECORD! 最高スコア更新';
+      } else {
+        overMsg.textContent = '最高スコア ' + best + ' 点';
+      }
+      overStats.textContent = 'SCORE ' + score;
+      showBest();
+      setTimeout(function () { ovOver.classList.remove('hidden'); }, 450);
+    }
+
+    function clearAll() {
+      running = false;
+      SFX.clear();
+      var best = loadBest();
+      if (score > best) {
+        localStorage.setItem('gm_best_breakout', String(score));
+        clearMsg.textContent = 'NEW RECORD! 最高スコア更新';
+      } else {
+        clearMsg.textContent = '最高スコア ' + best + ' 点';
+      }
+      clearStats.textContent = 'SCORE ' + score + ' / LIVES ' + lives;
+      showBest();
+      setTimeout(function () { ovClear.classList.remove('hidden'); }, 500);
+    }
+
+    function movePaddle(clientX) {
+      var rect = cv.getBoundingClientRect();
+      var scale = W / rect.width;
+      var x = (clientX - rect.left) * scale;
+      paddle.x = Math.max(0, Math.min(W - paddle.w, x - paddle.w / 2));
+    }
+
+    cv.addEventListener('mousemove', function (e) { if (running) movePaddle(e.clientX); });
+    cv.addEventListener('touchmove', function (e) {
+      if (running) { e.preventDefault(); movePaddle(e.touches[0].clientX); }
+    }, { passive: false });
+    cv.addEventListener('click', function () { if (running) launch(); });
+    cv.addEventListener('touchstart', function () { if (running) launch(); });
+
+    document.getElementById('btnStart').addEventListener('click', function () { SFX.click(); ovStart.classList.add('hidden'); resetAll(); running = true; loop(); });
+    document.getElementById('btnRetry').addEventListener('click', function () { SFX.click(); ovOver.classList.add('hidden'); resetAll(); running = true; loop(); });
+    document.getElementById('btnAgain').addEventListener('click', function () { SFX.click(); ovClear.classList.add('hidden'); resetAll(); running = true; loop(); });
+
+    showBest();
+    resetAll();
+    draw();
+  })();
+  </script>
+</body>
+</html>

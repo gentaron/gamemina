@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>404 NOT FOUND | GameMina</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=DotGothic16&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #07070f; --line: #26264a;
+      --neon-pink: #ff2d78; --neon-cyan: #00e5ff;
+      --text: #e9e9f8; --text-dim: #9a9ac0;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      gap: 18px;
+      padding: 20px;
+      font-family: 'Noto Sans JP', sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(ellipse 80% 50% at 50% -10%, rgba(178,107,255,.18), transparent 60%),
+        var(--bg);
+    }
+    .code {
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 900;
+      font-size: clamp(72px, 18vw, 150px);
+      letter-spacing: 8px;
+      color: #fff;
+      text-shadow: 0 0 10px rgba(255,255,255,.5), 0 0 26px var(--neon-pink), 0 0 60px rgba(0,229,255,.6);
+      animation: blink 1.4s steps(2) infinite;
+    }
+    @keyframes blink { 50% { opacity: .78; } }
+    .msg { font-family: 'DotGothic16', sans-serif; font-size: 20px; letter-spacing: 2px; color: var(--neon-cyan); text-shadow: 0 0 12px var(--neon-cyan); }
+    .desc { color: var(--text-dim); font-size: 14px; max-width: 420px; line-height: 1.8; }
+    a.btn {
+      display: inline-block;
+      margin-top: 8px;
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 700;
+      font-size: 13px;
+      letter-spacing: 3px;
+      color: var(--neon-cyan);
+      border: 1.5px solid var(--neon-cyan);
+      padding: 12px 36px;
+      border-radius: 10px;
+      text-decoration: none;
+      transition: background .2s, box-shadow .2s, color .2s;
+    }
+    a.btn:hover { background: var(--neon-cyan); color: #07070f; box-shadow: 0 0 26px rgba(0,229,255,.7); }
+  </style>
+</head>
+<body>
+  <p class="code">404</p>
+  <p class="msg">- NOT FOUND -</p>
+  <p class="desc">アクセスしたページは存在しないか、移動しました。<br>アーケードの入口はこちらから。</p>
+  <a class="btn" href="/">BACK TO HOME</a>
+</body>
+</html>
