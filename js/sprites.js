@@ -336,9 +336,10 @@ window.GM = window.GM || {};
         break;
       }
       case 'rift': {
-        ctx.fillStyle = '#1c1638'; ctx.fillRect(x, y, TILE, TILE);
-        ctx.fillStyle = '#251d4a'; ctx.fillRect(x + 1, y + 1, 14, 14);
-        ctx.fillStyle = 'rgba(155,120,255,.35)';
+        ctx.fillStyle = '#3a2f6e'; ctx.fillRect(x, y, TILE, TILE);
+        ctx.fillStyle = '#4a3c8a'; ctx.fillRect(x + 1, y + 1, 14, 14);
+        ctx.fillStyle = 'rgba(255,255,255,.08)'; ctx.fillRect(x + 1, y + 1, 14, 1);
+        ctx.fillStyle = 'rgba(190,160,255,.55)';
         ctx.fillRect(x, y, TILE, 1); ctx.fillRect(x, y, 1, TILE);
         if (rnd(3, 3) > 0.55) { ctx.fillStyle = 'rgba(190,160,255,.5)'; ctx.fillRect(x + 3 + (rnd(1, 4) * 9 | 0), y + 3 + (rnd(4, 1) * 9 | 0), 1, 1); }
         break;

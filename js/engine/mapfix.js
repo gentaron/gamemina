@@ -12,8 +12,8 @@
 'use strict';
 window.GM = window.GM || {};
 (function (GM) {
-  const SOLID = new Set(['#', ' ', 'w', 't', 'r', 'c', 'C', 'b', 'p', 'm', 'x', 'o', '*', 'T', 'v', 'P', 'F', 'L', 'u', 'K']);
-  const WALK_EVENTS = ['boss', 'exit', 'gate', 'gate2', 'save', 'shop', 'trigger', 'barrier'];
+  const SOLID = new Set(['#', ' ', 'w', 't', 'r', 'c', 'C', 'b', 'p', 'm', 'x', 'o', '*', 'T', 'v', 'P', 'F', 'L', 'u', 'K', 'S']);
+  const WALK_EVENTS = ['boss', 'exit', 'gate', 'gate2', 'shop', 'trigger', 'barrier'];
 
   function normalizeMap(def) {
     if (def._ready) return def;

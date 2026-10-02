@@ -88,7 +88,7 @@
   }
   /* 歩行可能判定（field.js の SOLID と同一定義。GM._SOLID があればそれを優先） */
   function solidSet(GM) {
-    return GM._SOLID || GM._MAP_SOLID || new Set(['#', ' ', 'w', 't', 'r', 'c', 'C', 'b', 'p', 'm', 'x', 'o', '*', 'T', 'v', 'P', 'F', 'L', 'u', 'K']);
+    return GM._SOLID || GM._MAP_SOLID || new Set(['#', ' ', 'w', 't', 'r', 'c', 'C', 'b', 'p', 'm', 'x', 'o', '*', 'T', 'v', 'P', 'F', 'L', 'u', 'K', 'S']);
   }
   function tileAt(map, x, y) {
     const row = map.map[y];
@@ -267,6 +267,11 @@
           if (ev.requires && !GM.ENEMIES[ev.requires]) throw new Error(`${id}: requires "${ev.requires}" が未定義の敵`);
         });
       }
+    });
+
+    t('【回帰】セーブ結晶は「調べる物体」で、通りがかりに踏んで発動しない', () => {
+      const GM = requireGM();
+      if (!solidSet(GM).has('S')) throw new Error("'S' が歩行可能 ─ 通過するたびにセーブ画面が開く（旧ハブのバグ）");
     });
 
     t('S / G タイルとイベントの実体一致', () => {
