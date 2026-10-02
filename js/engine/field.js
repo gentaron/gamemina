@@ -13,9 +13,12 @@ window.GM = window.GM || {};
   const TILE = 16; // ビューポート (GM.VW/GM.VH) は動的（fitScreen が画面比に合わせ拡張）
 
   /* tile solidity（'T'=茨は通過不可） */
-  const SOLID = new Set(['#', ' ', 'w', 't', 'r', 'c', 'C', 'b', 'p', 'm', 'x', 'o', '*', 'T']);
+  /* v3: 'v'=奈落 は通行不可（旧: 歩ける虚空で視覚と挙動が矛盾していた） */
+  const SOLID = new Set(['#', ' ', 'w', 't', 'r', 'c', 'C', 'b', 'p', 'm', 'x', 'o', '*', 'T', 'v', 'P', 'F', 'L', 'u', 'K']);
   /* 影を落とすオクルーダー（壁＋背の高い障害物） */
-  const OCCLUDER = new Set(['#', 'm', 'r', 'c', 'C', 'o', 'x', 't', 'T']);
+  const OCCLUDER = new Set(['#', 'm', 'r', 'c', 'C', 'o', 'x', 't', 'T', 'P', 'K']);
+  /* 床の上に置かれる装飾タイル（焼き込み時に下地の床を先に描く） */
+  const ON_FLOOR = new Set(['tree', 'crate', 'plant', 'sign', 'chest', 'pillar', 'fence', 'rubble', 'statue', 'stair', 'door', 'thorn', 'rock', 'counter', 'bed']);
   function tileAt(map, x, y) {
     const row = map.map[y];
     if (!row) return '#';
@@ -32,8 +35,8 @@ window.GM = window.GM || {};
   function tileType(map, ch) {
     switch (ch) {
       case '#': return map.wallTile || 'wall';
-      case '.': return map.floorTile || 'stone';
-      case 'w': return 'water';
+      case '.': return (map.floorTile === 'void' ? 'rift' : map.floorTile) || 'stone';
+      case 'w': return map.liquid || 'water';
       case 't': return 'tree';
       case 'r': return 'rock';
       case 'c': return 'crate';
@@ -59,13 +62,23 @@ window.GM = window.GM || {};
       case 'f': return 'flower';
       case 'T': return 'thorn';
       case ' ': return 'void';
+      case ',': return map.altTile || 'stone';
+      case ':': return 'dirt';
+      case '=': return 'road';
+      case 'V': return 'rift';
+      case 'D': return 'door';
+      case 'P': return 'pillar';
+      case 'F': return 'fence';
+      case 'L': return 'lamp';
+      case 'u': return 'rubble';
+      case 'K': return 'statue';
       default: return map.floorTile || 'stone';
     }
   }
   GM.tileType = tileType;
 
   /* アニメーションするタイル（毎フレーム描画） */
-  const ANIMATED = new Set(['water', 'void', 'gate', 'save', 'console']);
+  const ANIMATED = new Set(['water', 'slime', 'sewage', 'void', 'gate', 'save', 'console', 'lamp']);
 
   /* ---------------- map bake (静的レイヤー) ---------------- */
   const bakeCache = new Map();   // mapId → canvas
@@ -86,15 +99,17 @@ window.GM = window.GM || {};
         const type = tileType(def, ch);
         if (ANIMATED.has(type)) {
           // アニメタイルの床下地を焼いておく
-          if (type === 'gate' || type === 'save') { GM.SPRITES.drawFloorTile(c, def.floorTile || 'stone', tx, ty, 7); }
+          if (type === 'gate' || type === 'save' || type === 'lamp') { GM.SPRITES.drawFloorTile(c, def.floorTile || 'stone', tx, ty, 7); }
           else if (type === 'void' || type === 'water' || type === 'console') { /* 下地なしで毎フレーム全面描画 */ }
           continue;
         }
         if (ch === '#' || ch === 'm') {
           const below = walkable(tx, ty + 1), above = walkable(tx, ty - 1);
-          const variant = below ? 'front' : (above ? 'cap' : 'flat');
+          let variant = below ? 'front' : (above ? 'cap' : 'flat');
+          if (def.roofs && variant !== 'front') variant = variant === 'cap' ? 'roofcap' : 'roof';
           GM.SPRITES.drawWallTile(c, type, tx, ty, variant, 7);
         } else {
+          if (ON_FLOOR.has(type)) GM.SPRITES.drawFloorTile(c, def.floorTile || 'stone', tx, ty, 7);
           GM.SPRITES.drawTile(c, type, tx, ty, 0, 7);
         }
       }
@@ -192,6 +207,10 @@ window.GM = window.GM || {};
     def._w = w; def._h = def.map.length;
     if (!bakeCache.has(mapId)) bakeCache.set(mapId, bakeMap(mapId, def));
     S.bake = bakeCache.get(mapId);
+    if (GM._lastBannerMap !== mapId) {
+      GM._lastBannerMap = mapId;
+      if (GM.showAreaBanner) GM.showAreaBanner(def.name, def.encounters ? '── 魔物の気配がする ──' : (def.id === 'hub' ? '── 時空の回廊 ──' : ''));
+    }
     S.steps = 0;
     S.encThreshold = (def.encRate || 16) + U.randi(-4, 6);
     if (def.bgm) GM.AUDIO.playBGM(def.bgm);
@@ -273,15 +292,69 @@ window.GM = window.GM || {};
     if (!S.map.events) return null;
     return S.map.events.find((e) => e.x === x && e.y === y) || null;
   }
+  /* 仲間に加わった NPC は消える（hideIfParty） */
+  function npcVisible(n) {
+    return !(n.hideIfParty && S.party.some((m) => m.id === n.hideIfParty));
+  }
+  GM.npcVisible = npcVisible;
   function npcAt(x, y) {
-    return (S.map.npcs || []).find((n) => n.x === x && n.y === y) || null;
+    return (S.map.npcs || []).find((n) => n.x === x && n.y === y && npcVisible(n)) || null;
+  }
+
+  /* ---------- ボス撃破状態 / 封印 ----------
+     defeated_<boss> フラグが正。旧セーブ互換として「その章をクリア済みなら撃破済み」とみなす */
+  const BOSS_CHAPTER = {
+    bugboss: 0, executor: 1, titanrex: 2, celia: 2, ronan: 3, slimecore: 4, slimewoman: 4,
+    dalgos: 5, vaeron: 5, fiona: 6, goldenvenom: 7, possessed: 8, minotaur: 9, abyssreais: 9,
+    omega: 10, diana: 10
+  };
+  GM.BOSS_CHAPTER = BOSS_CHAPTER;
+  GM.bossDefeated = function (id) {
+    if (S.flags['defeated_' + id]) return true;
+    const ch = BOSS_CHAPTER[id];
+    if (ch != null && ch > 0 && (S.chapter || 0) >= ch) return true;
+    if (ch === 0 && S.flags.hub_open) return true;
+    return false;
+  };
+  GM.bossAlive = function (ev, mapId) {
+    if (!ev || ev.type !== 'boss') return false;
+    if (S.killed[(mapId || S.mapId) + ':' + ev.x + ',' + ev.y]) return false;
+    return !GM.bossDefeated(ev.boss);
+  };
+  /* requires（ボス撃破）/ requiresFlag（フラグ）を満たさない間はロック */
+  GM.isLocked = function (ev) {
+    if (!ev) return false;
+    if (ev.requires && !GM.bossDefeated(ev.requires)) return true;
+    if (ev.requiresFlag && !S.flags[ev.requiresFlag]) return true;
+    return false;
+  };
+  /* 歩行をブロックするイベント（生存ボス・ロック中の封印/出口） */
+  function blockingEventAt(x, y) {
+    const ev = eventAt(x, y);
+    if (!ev) return null;
+    if (ev.type === 'boss' && GM.bossAlive(ev)) return ev;
+    if ((ev.type === 'barrier' || ev.requires || ev.requiresFlag) && GM.isLocked(ev)) return ev;
+    return null;
+  }
+  GM.blockingEventAt = blockingEventAt;
+  const LOCK_MSG = {
+    exit: ['──見えない力に阻まれて、先へ進めない。', 'この場所を守る「主」を倒せば、道は開くはずだ。'],
+    gate2: ['──壁に、微かな裂け目がある。', '今はまだ、向こう側の気配は閉ざされている。'],
+    barrier: ['──封印の障壁が道を塞いでいる。']
+  };
+  async function showLocked(ev) {
+    const lines = ev.lines || LOCK_MSG[ev.type] || LOCK_MSG.barrier;
+    GM.AUDIO.sfx('cancel');
+    for (const line of lines) await GM.Dlg.show(null, line);
+    GM.Dlg.hide();
   }
 
   async function interact() {
     const d = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] }[S.player.dir];
     const tx = S.player.x + d[0], ty = S.player.y + d[1];
-    // NPC
-    const npc = npcAt(tx, ty);
+    // NPC（カウンター越しの会話にも対応）
+    let npc = npcAt(tx, ty);
+    if (!npc && tileAt(S.map, tx, ty) === 'C' && !eventAt(tx, ty)) npc = npcAt(tx + d[0], ty + d[1]);
     if (npc) {
       GM.AUDIO.sfx('open');
       npc.dir = ({ up: 'down', down: 'up', left: 'right', right: 'left' })[S.player.dir];
@@ -290,6 +363,7 @@ window.GM = window.GM || {};
         for (const line of npc.lines) await GM.Dlg.show(npc.name, line);
         GM.Dlg.hide();
       }
+      if (npc.shop != null) await GM.openShop(npc.shop);
       return;
     }
     // chest tile
@@ -308,6 +382,7 @@ window.GM = window.GM || {};
     }
     const ev = eventAt(tx, ty);
     if (!ev) return;
+    if (GM.isLocked(ev)) { await showLocked(ev); return; }
     await runEvent(ev, tx, ty);
   }
   GM.interact = interact;
@@ -340,11 +415,12 @@ window.GM = window.GM || {};
         break;
       }
       case 'gate2':
-        if (ev.hidden && !S.killed[ev.script]) { /* 隠しゲート */ }
+        if (GM.isLocked(ev)) { await showLocked(ev); break; }
         GM.AUDIO.sfx('gate');
         await GM.runScript(ev.script);
         break;
       case 'exit': {
+        if (GM.isLocked(ev)) { await showLocked(ev); break; }
         GM.AUDIO.sfx('confirm');
         const to = ev.to[0];
         const dst = GM.MAPS[to];
@@ -365,7 +441,7 @@ window.GM = window.GM || {};
         break;
       case 'boss': {
         const key = S.mapId + ':' + tx + ',' + ty;
-        if (S.killed[key]) break;
+        if (!GM.bossAlive(ev)) break;
         GM.pendingBossKey = key;
         await GM.runScript(ev.script);
         break;
@@ -391,6 +467,7 @@ window.GM = window.GM || {};
   const MOVE_MS = 140;
   let lastDir = 'down';
   let stepLock = 0;  // step-on 発動後のクールダウン
+  let bumpLock = 0;  // ボス/封印への体当たりクールダウン
 
   function tryMove(dir) {
     if (S.player.moving) return;
@@ -399,6 +476,15 @@ window.GM = window.GM || {};
     const nx = S.player.x + d[0], ny = S.player.y + d[1];
     if (GM.isSolid(S.map, nx, ny)) return;
     if (npcAt(nx, ny)) return;
+    const blk = blockingEventAt(nx, ny);
+    if (blk) {
+      // ボスに体当たり → 戦闘開始 / 封印 → メッセージ（連打防止のクールダウン付き）
+      if (!GM.uiOwner && GM.tickNow() - bumpLock > 600) {
+        bumpLock = GM.tickNow();
+        S.player._pendingBump = blk;
+      }
+      return;
+    }
     S.player.moving = true;
     moveT = 0;
     S.player.fx = S.player.x; S.player.fy = S.player.y;
@@ -444,11 +530,19 @@ window.GM = window.GM || {};
       stepLock = GM.tickNow();
       GM.runEvent(ev, S.player.x, S.player.y);
     }
-    // input
-    if (!S.player.moving && S.scene === 'field' && !GM.uiOwner) {
+    // bump（ボス接触・封印）
+    if (S.player._pendingBump && !S.player.moving && !GM.uiOwner && S.scene === 'field') {
+      const ev = S.player._pendingBump;
+      S.player._pendingBump = null;
+      if (ev.type === 'boss') { GM.AUDIO.sfx('encounter'); GM.runEvent(ev, ev.x, ev.y); }
+      else showLocked(ev);
+    }
+    // input（会話ウィンドウ表示中は歩けない）
+    if (!S.player.moving && S.scene === 'field' && !GM.uiOwner && !GM.dialogueOpen()) {
       const b = GM.Input.consume();
       if (b === 'a') { GM.AUDIO.sfx('cursor'); interact(); }
       else if (b === 'menu') { GM.Menu.open(); }
+      else if (b === 'map') { GM.toggleMinimap(); }
       else if (b) lastDir = b;
       if (heldReady()) {
         for (const dir of ['up', 'down', 'left', 'right']) {
@@ -472,7 +566,7 @@ window.GM = window.GM || {};
     }
     // npc wander
     (S.map.npcs || []).forEach((npc) => {
-      if (!npc.wander) return;
+      if (!npc.wander || !npcVisible(npc)) return;
       npc._t = (npc._t || 0) + dt;
       if (npc._t > 2200) {
         npc._t = 0;
@@ -480,7 +574,9 @@ window.GM = window.GM || {};
         const dir = U.pick(dirs);
         const d = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] }[dir];
         const nx = npc.x + d[0], ny = npc.y + d[1];
-        if (!GM.isSolid(S.map, nx, ny) && !npcAt(nx, ny) &&
+        const home = npc._home || (npc._home = { x: npc.x, y: npc.y });
+        if (!GM.isSolid(S.map, nx, ny) && !npcAt(nx, ny) && !eventAt(nx, ny) &&
+          Math.abs(nx - home.x) + Math.abs(ny - home.y) <= 3 &&
           !(nx === S.player.x && ny === S.player.y)) {
           npc.x = nx; npc.y = ny; npc.dir = dir;
         }
@@ -527,22 +623,28 @@ window.GM = window.GM || {};
     if (ev.type === 'exit') {
       const dst = GM.MAPS[ev.to && ev.to[0]];
       if (!dst) return null;
+      if (GM.isLocked(ev)) return '✖ 封印中';
       return dst.id === 'hub' ? '▶ リミナル・フォージ' : '▶ ' + dst.name;
+    }
+    if (ev.type === 'boss') {
+      if (!GM.bossAlive(ev)) return null;
+      const e = GM.ENEMIES[ev.boss];
+      return '⚠ ' + (e ? e.name : 'BOSS');
     }
     if (ev.type === 'gate' && ev.gate) {
       const ch = GM.CHAPTERS && GM.CHAPTERS[ev.gate];
       if (!S.gates[ev.gate]) return '第' + ev.gate + '章ゲート（未起動）';
       return ch ? ('▶ 第' + ev.gate + '章「' + ch.name + '」') : ('▶ 第' + ev.gate + '章');
     }
-    if (ev.type === 'gate2') return '▶ ？？？';
+    if (ev.type === 'gate2') return GM.isLocked(ev) ? (ev.hidden ? null : '✖ 封印された門') : '▶ ？？？';
     return null;
   }
 
   function drawPortalLabels(ctx, map, camX, camY, VW, VH) {
     (map.events || []).forEach((ev) => {
-      if (ev.type !== 'exit' && ev.type !== 'gate' && ev.type !== 'gate2') return;
+      if (ev.type !== 'exit' && ev.type !== 'gate' && ev.type !== 'gate2' && ev.type !== 'boss') return;
       const d = Math.abs(ev.x - S.player.x) + Math.abs(ev.y - S.player.y);
-      if (d > 5) return;
+      if (d > (ev.type === 'boss' ? 7 : 5)) return;
       const text = portalLabel(ev);
       if (!text) return;
       const sx = ev.x * TILE - camX + 8, sy = ev.y * TILE - camY;
@@ -555,10 +657,11 @@ window.GM = window.GM || {};
       if (by < 2) by = 2;
       ctx.fillStyle = 'rgba(4,8,24,.86)';
       ctx.fillRect(bx, by, w, 12);
-      ctx.strokeStyle = ev.type === 'exit' ? 'rgba(120,235,255,.9)' : 'rgba(255,217,74,.9)';
+      const boss = ev.type === 'boss';
+      ctx.strokeStyle = boss ? 'rgba(255,90,110,.95)' : ev.type === 'exit' ? 'rgba(120,235,255,.9)' : 'rgba(255,217,74,.9)';
       ctx.lineWidth = 1;
       ctx.strokeRect(bx + 0.5, by + 0.5, w - 1, 11);
-      ctx.fillStyle = ev.type === 'exit' ? '#bff4ff' : '#ffe9a0';
+      ctx.fillStyle = boss ? '#ffc4cc' : ev.type === 'exit' ? '#bff4ff' : '#ffe9a0';
       ctx.fillText(text, bx + w / 2, by + 9);
     });
   }
@@ -566,15 +669,17 @@ window.GM = window.GM || {};
   function drawPortalArrows(ctx, map, camX, camY, VW, VH) {
     const pl = Math.sin(S.tick / 12) * 0.5 + 0.5;
     (map.events || []).forEach((ev) => {
-      if (ev.type !== 'exit' && ev.type !== 'gate') return;
+      if (ev.type !== 'exit' && ev.type !== 'gate' && ev.type !== 'boss') return;
       if (ev.type === 'gate' && !S.gates[ev.gate]) return; // 未起動ゲートは案内しない
+      if (ev.type === 'boss' && !GM.bossAlive(ev)) return;
+      if (ev.type === 'exit' && GM.isLocked(ev)) return;
       const cx = ev.x * TILE + 8 - camX, cy = ev.y * TILE + 8 - camY;
       const m = 14;
       if (cx > m && cx < VW - m && cy > m && cy < VH - m) return; // 画面内なら不要
       const ax = Math.max(m, Math.min(VW - m, cx));
       const ay = Math.max(m, Math.min(VH - m, cy));
       const ang = Math.atan2(cy - ay, cx - ax);
-      const rgb = ev.type === 'exit' ? '98,214,255' : '255,217,74';
+      const rgb = ev.type === 'boss' ? '255,90,110' : ev.type === 'exit' ? '98,214,255' : '255,217,74';
       ctx.save();
       ctx.translate(ax, ay);
       ctx.rotate(ang);
@@ -590,6 +695,143 @@ window.GM = window.GM || {};
     ctx.globalAlpha = 1;
   }
 
+  /* ---------------- 奈落の縁（崖の断面） ---------------- */
+  function drawVoidLip(ctx, map, tx, ty) {
+    const up = tileAt(map, tx, ty - 1);
+    if (up === 'v' || up === ' ' || up === '#' || up === 'm') return;
+    const x = tx * TILE, y = ty * TILE;
+    ctx.fillStyle = '#2a2f45'; ctx.fillRect(x, y, TILE, 4);
+    ctx.fillStyle = '#3d4463'; ctx.fillRect(x, y, TILE, 1);
+    const g = ctx.createLinearGradient(0, y + 4, 0, y + 10);
+    g.addColorStop(0, 'rgba(20,24,44,.85)'); g.addColorStop(1, 'rgba(4,5,13,0)');
+    ctx.fillStyle = g; ctx.fillRect(x, y + 4, TILE, 6);
+  }
+
+  /* ---------------- 封印障壁 / 隠し裂け目 ---------------- */
+  function drawSeal(ctx, sx, sy, t) {
+    const pl = Math.sin(t / 10) * 0.5 + 0.5;
+    ctx.fillStyle = `rgba(160,70,255,${0.28 + pl * 0.18})`;
+    ctx.fillRect(sx + 1, sy, 14, 16);
+    ctx.fillStyle = `rgba(230,190,255,${0.55 + pl * 0.35})`;
+    for (let i = 0; i < 4; i++) {
+      const yy = sy + ((i * 4 + (t >> 2)) % 16);
+      ctx.fillRect(sx + 1, yy, 14, 1);
+    }
+    ctx.strokeStyle = `rgba(255,120,200,${0.7 + pl * 0.3})`; ctx.lineWidth = 1;
+    ctx.strokeRect(sx + 1.5, sy + 0.5, 13, 15);
+    // 錠前
+    ctx.fillStyle = '#ffd94a'; ctx.fillRect(sx + 6, sy + 7, 4, 4);
+    ctx.strokeStyle = '#ffd94a'; ctx.beginPath(); ctx.arc(sx + 8, sy + 7, 2, Math.PI, 0); ctx.stroke();
+  }
+  function drawCrack(ctx, sx, sy, t) {
+    // 未解放の隠し門: 壁と見分けにくい裂け目だけが微かに光る
+    ctx.save(); ctx.translate(sx, sy);
+    GM.SPRITES.drawWallTile(ctx, S.map.wallTile || 'wall', 0, 0, 'front', 3);
+    const pl = Math.sin(t / 18) * 0.5 + 0.5;
+    ctx.fillStyle = `rgba(190,120,255,${0.25 + pl * 0.45})`;
+    ctx.fillRect(7, 2, 1, 4); ctx.fillRect(8, 5, 1, 4); ctx.fillRect(7, 8, 1, 3); ctx.fillRect(8, 11, 1, 3);
+    ctx.restore();
+  }
+
+  /* ---------------- フィールド上のボス ---------------- */
+  function drawFieldBoss(ctx, ev, sx, sy, t) {
+    const e = GM.ENEMIES[ev.boss];
+    const pl = Math.sin(t / 9) * 0.5 + 0.5;
+    const bob = Math.round(Math.sin(t / 14) * 1.5);
+    // 足元の禍々しいオーラ
+    ctx.save();
+    ctx.fillStyle = `rgba(255,40,80,${0.18 + pl * 0.16})`;
+    ctx.beginPath(); ctx.ellipse(sx + 8, sy + 14, 11, 4.5, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = `rgba(255,120,150,${0.45 + pl * 0.4})`; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.ellipse(sx + 8, sy + 14, 9 + pl * 2, 3.5 + pl, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+    if (e && e.spr && GM.ENEMY_ART && GM.ENEMY_ART[e.spr]) {
+      GM.SPRITES.drawEnemy(ctx, e.spr, sx + 8, sy + 14 + bob, 1, {});
+    } else {
+      ctx.fillStyle = `rgba(255,60,90,${0.7 + pl * 0.3})`; ctx.fillRect(sx + 4, sy + 2 + bob, 8, 11);
+    }
+    // 頭上の「！」
+    const ay = sy - 9 - Math.round(pl * 2);
+    ctx.fillStyle = '#ff5a6e'; ctx.fillRect(sx + 7, ay, 2, 5); ctx.fillRect(sx + 7, ay + 6, 2, 2);
+  }
+
+  /* ---------------- エリア名バナー ---------------- */
+  let banner = null; // { text, sub, t0 }
+  GM.showAreaBanner = function (text, sub) { banner = { text, sub: sub || '', t0: GM.tickNow() }; };
+  function drawAreaBanner(ctx, VW) {
+    if (!banner) return;
+    const age = GM.tickNow() - banner.t0;
+    const LIFE = 2600;
+    if (age > LIFE) { banner = null; return; }
+    const a = age < 300 ? age / 300 : age > LIFE - 500 ? (LIFE - age) / 500 : 1;
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, a);
+    ctx.font = 'bold 12px monospace';
+    ctx.textAlign = 'center';
+    const w = Math.max(ctx.measureText(banner.text).width + 48, 160);
+    const x = VW / 2 - w / 2, y = 22;
+    const g = ctx.createLinearGradient(x, 0, x + w, 0);
+    g.addColorStop(0, 'rgba(4,8,24,0)'); g.addColorStop(0.2, 'rgba(4,8,24,.88)');
+    g.addColorStop(0.8, 'rgba(4,8,24,.88)'); g.addColorStop(1, 'rgba(4,8,24,0)');
+    ctx.fillStyle = g; ctx.fillRect(x, y, w, banner.sub ? 30 : 20);
+    ctx.fillStyle = 'rgba(255,217,74,.8)'; ctx.fillRect(x + w * 0.2, y, w * 0.6, 1); ctx.fillRect(x + w * 0.2, y + (banner.sub ? 29 : 19), w * 0.6, 1);
+    ctx.fillStyle = '#f4f6ff'; ctx.fillText(banner.text, VW / 2, y + 14);
+    if (banner.sub) { ctx.font = '8px monospace'; ctx.fillStyle = '#aab4d8'; ctx.fillText(banner.sub, VW / 2, y + 25); }
+    ctx.restore();
+  }
+
+  /* ---------------- ミニマップ（Q / HUD の地図ボタン） ---------------- */
+  GM.toggleMinimap = function () {
+    if (S.scene !== 'field' && S.scene !== 'script') return;
+    S.showMinimap = !S.showMinimap;
+    GM.AUDIO.sfx(S.showMinimap ? 'open' : 'cancel');
+    try { localStorage.setItem('gm_minimap', S.showMinimap ? '1' : '0'); } catch (e) {}
+  };
+  try { S.showMinimap = localStorage.getItem('gm_minimap') === '1'; } catch (e) {}
+  const mmCache = new Map();
+  function minimapBase(map) {
+    if (mmCache.has(map.id)) return mmCache.get(map.id);
+    const cv = document.createElement('canvas');
+    cv.width = map._w; cv.height = map._h;
+    const c = cv.getContext('2d');
+    for (let y = 0; y < map._h; y++) for (let x = 0; x < map._w; x++) {
+      const ch = tileAt(map, x, y);
+      let col = null;
+      if (ch === 'v' || ch === ' ') col = null;
+      else if (ch === 'w') col = map.liquid === 'slime' ? '#2f7a3a' : '#2a4f90';
+      else if (ch === '#' || ch === 'm') col = '#1a2038';
+      else if (SOLID.has(ch)) col = '#39415e';
+      else col = '#7f89ad';
+      if (col) { c.fillStyle = col; c.fillRect(x, y, 1, 1); }
+    }
+    mmCache.set(map.id, cv);
+    return cv;
+  }
+  function drawMinimap(ctx, map, VW, VH) {
+    const sc = Math.max(2, Math.min(4, Math.floor(Math.min(VW * 0.34 / map._w, VH * 0.45 / map._h))));
+    const w = map._w * sc, h = map._h * sc;
+    const x0 = VW - w - 8, y0 = 22;
+    ctx.save();
+    ctx.fillStyle = 'rgba(2,4,14,.78)'; ctx.fillRect(x0 - 4, y0 - 4, w + 8, h + 16);
+    ctx.strokeStyle = 'rgba(120,235,255,.55)'; ctx.lineWidth = 1; ctx.strokeRect(x0 - 3.5, y0 - 3.5, w + 7, h + 15);
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(minimapBase(map), x0, y0, w, h);
+    const dot = (x, y, col, big) => { ctx.fillStyle = col; const s2 = big ? sc + 2 : sc; ctx.fillRect(x0 + x * sc - (big ? 1 : 0), y0 + y * sc - (big ? 1 : 0), s2, s2); };
+    (map.chests || []).forEach((c) => { if (!S.opened[S.mapId + ':' + c.x + ',' + c.y]) dot(c.x, c.y, '#ffd94a'); });
+    (map.events || []).forEach((ev) => {
+      if (ev.type === 'exit') dot(ev.x, ev.y, GM.isLocked(ev) ? '#b05cff' : '#62d6ff', true);
+      else if (ev.type === 'gate' && S.gates[ev.gate]) dot(ev.x, ev.y, '#ffd94a', true);
+      else if (ev.type === 'save') dot(ev.x, ev.y, '#9fe8ff');
+      else if (ev.type === 'boss' && GM.bossAlive(ev)) dot(ev.x, ev.y, '#ff4a64', true);
+      else if (ev.type === 'barrier' && GM.isLocked(ev)) dot(ev.x, ev.y, '#b05cff');
+    });
+    (map.npcs || []).forEach((n) => { if (npcVisible(n)) dot(n.x, n.y, '#7ce38b'); });
+    if ((S.tick >> 4) % 2 === 0) dot(S.player.x, S.player.y, '#ff7eb6', true);
+    ctx.font = '8px monospace'; ctx.textAlign = 'left'; ctx.fillStyle = '#bff4ff';
+    ctx.fillText('MAP [Q]', x0, y0 + h + 9);
+    ctx.restore();
+  }
+
   /* ---------------- render ---------------- */
   function renderField(ctx) {
     const VW = GM.VW, VH = GM.VH;
@@ -602,18 +844,33 @@ window.GM = window.GM || {};
     ctx.fillRect(0, 0, VW, VH);
     // 静的レイヤー
     ctx.drawImage(S.bake, -camX, -camY);
-    // アニメーションタイル
+    // アニメーションタイル（ワールド座標で描くためカメラ分を平行移動。
+    // 旧: オフセット未適用でスクロール時に水・結晶・ゲートが本来の位置からズレていた）
+    ctx.save();
+    ctx.translate(-camX, -camY);
     for (let ty = y0; ty <= y1; ty++) {
       for (let tx = x0; tx <= x1; tx++) {
         const type = tileType(map, tileAt(map, tx, ty));
-        if (ANIMATED.has(type)) GM.SPRITES.drawTile(ctx, type, tx, ty, S.tick, 7);
+        if (ANIMATED.has(type)) {
+          GM.SPRITES.drawTile(ctx, type, tx, ty, S.tick, 7);
+          if (type === 'void') drawVoidLip(ctx, map, tx, ty);
+        }
       }
     }
-    // 出口ポータル（点滅クリスタル + 光柱 + ルーン）
+    ctx.restore();
+    // 出口ポータル（点滅クリスタル + 光柱 + ルーン）/ 封印 / 隠し裂け目
     (map.events || []).forEach((ev) => {
-      if (ev.type !== 'exit') return;
       const sx = ev.x * TILE - camX, sy = ev.y * TILE - camY;
-      if (sx > -24 && sy > -24 && sx < VW + 24 && sy < VH + 24) drawExitPortal(ctx, sx, sy, S.tick);
+      if (!(sx > -24 && sy > -24 && sx < VW + 24 && sy < VH + 24)) return;
+      const locked = GM.isLocked(ev);
+      if (ev.type === 'exit') {
+        drawExitPortal(ctx, sx, sy, S.tick);
+        if (locked) drawSeal(ctx, sx, sy, S.tick);
+      } else if (ev.type === 'barrier' && locked) {
+        drawSeal(ctx, sx, sy, S.tick);
+      } else if (ev.type === 'gate2' && locked) {
+        if (ev.hidden) drawCrack(ctx, sx, sy, S.tick); else drawSeal(ctx, sx, sy, S.tick);
+      }
     });
     // opened chests look
     (map.chests || []).forEach((c) => {
@@ -621,12 +878,22 @@ window.GM = window.GM || {};
       if (S.opened[key]) {
         const sx = c.x * TILE - camX, sy = c.y * TILE - camY;
         if (sx > -TILE && sy > -TILE && sx < VW && sy < VH) {
+          ctx.save(); ctx.translate(-camX, -camY);
+          GM.SPRITES.drawFloorTile(ctx, map.floorTile || 'stone', c.x, c.y, 7);
           GM.SPRITES.drawTile(ctx, 'chestopen', c.x, c.y, S.tick, 7);
+          ctx.restore();
         }
       }
     });
+    // ボス（フィールドに実体表示。旧: 不可視で「何も無い行き止まり」に見えていた）
+    (map.events || []).forEach((ev) => {
+      if (ev.type !== 'boss' || !GM.bossAlive(ev)) return;
+      const sx = ev.x * TILE - camX, sy = ev.y * TILE - camY;
+      if (sx > -40 && sy > -40 && sx < VW + 40 && sy < VH + 40) drawFieldBoss(ctx, ev, sx, sy, S.tick);
+    });
     // npcs
     (map.npcs || []).forEach((npc) => {
+      if (!npcVisible(npc)) return;
       const look = typeof npc.look === 'string' ? (GM.LOOKS[npc.look] || GM.LOOKS.citizen) : npc.look;
       const sx = npc.x * TILE - camX, sy = npc.y * TILE - camY;
       if (sx > -32 && sy > -32 && sx < VW + 32 && sy < VH + 32) {
@@ -645,6 +912,9 @@ window.GM = window.GM || {};
     drawPortalLabels(ctx, map, camX, camY, VW, VH);
     // 画面外ポータルへの方向矢印
     drawPortalArrows(ctx, map, camX, camY, VW, VH);
+    // エリア名バナー / ミニマップ
+    drawAreaBanner(ctx, VW);
+    if (S.showMinimap) drawMinimap(ctx, map, VW, VH);
     // fade
     if (S.fade.a > 0) {
       ctx.fillStyle = `rgba(0,0,0,${S.fade.a})`;

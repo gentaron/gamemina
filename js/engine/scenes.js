@@ -77,8 +77,11 @@ window.GM = window.GM || {};
         return true;
       }
       case 'flag': {
-        S.flags[step.key] = step.val;
-        if (step.key === 'chapter' && typeof step.val === 'number') S.chapter = step.val;
+        // 章進行は単調増加（クリア済み章の再訪で巻き戻らない）
+        if (step.key === 'chapter' && typeof step.val === 'number') {
+          S.chapter = Math.max(S.chapter || 0, step.val);
+          S.flags.chapter = S.chapter;
+        } else S.flags[step.key] = step.val;
         return true;
       }
       case 'openGate': {
@@ -121,7 +124,12 @@ window.GM = window.GM || {};
         GM.updateHUD();
         return true;
       }
-      case 'shop': { await GM.openShop(step.shop); return true; }
+      case 'shop': {
+        // 'chapter' = 章の進行に応じて品揃え拡張（ハブの K-ショップ）
+        const lvl = step.shop === 'chapter' ? Math.min(9, Math.max(0, S.chapter || 0)) : step.shop;
+        await GM.openShop(lvl);
+        return true;
+      }
       case 'heal': {
         S.party.forEach((m) => { m.hp = m.maxhp; m.mp = m.maxmp; });
         GM.AUDIO.sfx('heal');
@@ -132,8 +140,9 @@ window.GM = window.GM || {};
       case 'boss': {
         GM.pendingBossKey = GM.pendingBossKey || null;
         const won = await GM.Battle.run([step.boss], { boss: true, noEscape: true });
+        if (!won) { GM.pendingBossKey = null; return false; } // game over overlay shown by battle
         if (GM.pendingBossKey) { S.killed[GM.pendingBossKey] = true; GM.pendingBossKey = null; }
-        if (!won) { return false; } // game over overlay shown by battle
+        S.flags['defeated_' + step.boss] = true;
         return true;
       }
       case 'choice': {

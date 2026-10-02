@@ -33,16 +33,16 @@ GM.LOOKS = {
 
 /* 章タイトル定義 */
 GM.CHAPTERS = {
-  1:  { num: '第一章', name: '企業の鎖', sub: 'E318 ─ ZAMLT時代 ─ ギガポリス', map: 'ch1', hx: 18, hy: 4 },
+  1:  { num: '第一章', name: '企業の鎖', sub: 'E318 ─ ZAMLT時代 ─ ギガポリス', map: 'ch1', hx: 3, hy: 4 },
   2:  { num: '第二章', name: '黄金の皇帝', sub: 'E340 ─ セリア黄金期 ─ セリノポリス', map: 'ch2', hx: 6, hy: 4 },
   3:  { num: '第三章', name: '大戦の嵐', sub: 'E375 ─ アポロン・ドミニオン大戦', map: 'ch3', hx: 9, hy: 4 },
   4:  { num: '第四章', name: 'スライム危機', sub: 'E385 ─ アンダーシティ第6層', map: 'ch4', hx: 12, hy: 4 },
   5:  { num: '第五章', name: '暗黒の時代', sub: 'E400 ─ エヴァトロン支配', map: 'ch5', hx: 15, hy: 4 },
-  6:  { num: '第六章', name: 'Irisの時代', sub: 'E490 ─ 東大陸クレセント ─ ヴァーミリオン', map: 'ch6', hx: 18, hy: 4 },
-  7:  { num: '第七章', name: '金色の粛清', sub: 'E509 ─ ノスタルジア・コロニー', map: 'ch7', hx: 21, hy: 4 },
-  8:  { num: '第八章', name: '次元の彼方', sub: 'AD2026 ─ Tier Δ ─ 美咲が丘', map: 'ch8', hx: 24, hy: 4 },
-  9:  { num: '第九章', name: 'Trap Dungeon', sub: 'E522 ─ 検証的迷宮', map: 'trap1', hx: 27, hy: 4 },
-  10: { num: '終章', name: 'オメガの回廊', sub: 'E528 ─ Tier Ω ─ 高次元領域', map: 'ch10', hx: 30, hy: 4 }
+  6:  { num: '第六章', name: 'Irisの時代', sub: 'E490 ─ 東大陸クレセント ─ ヴァーミリオン', map: 'ch6', hx: 21, hy: 4 },
+  7:  { num: '第七章', name: '金色の粛清', sub: 'E509 ─ ノスタルジア・コロニー', map: 'ch7', hx: 24, hy: 4 },
+  8:  { num: '第八章', name: '次元の彼方', sub: 'AD2026 ─ Tier Δ ─ 美咲が丘', map: 'ch8', hx: 27, hy: 4 },
+  9:  { num: '第九章', name: 'Trap Dungeon', sub: 'E522 ─ 検証的迷宮', map: 'trap1', hx: 30, hy: 4 },
+  10: { num: '終章', name: 'オメガの回廊', sub: 'E528 ─ Tier Ω ─ 高次元領域', map: 'ch10', hx: 33, hy: 4 }
 };
 
 /* アルカイブ（ロア収集要素） */
@@ -153,7 +153,7 @@ hub_gentaro: [
 
 shop_kate: [
   { t: 'msg', name: 'K・パットン', text: 'いらっしゃい。リミナル・フォージ正規店、K-ショップよ。', },
-  { t: 'shop', shop: 0 }
+  { t: 'shop', shop: 'chapter' }
 ],
 
 inn_lillie: [
@@ -187,7 +187,7 @@ gate_go_1: [
   { t: 'card', num: '第一章', name: '企業の鎖', sub: 'E318 ─ ZAMLT時代 ─ ギガポリス' },
   { t: 'archive', id: 3 },
   { t: 'fade', to: 'black', ms: 500 },
-  { t: 'warp', map: 'ch1', x: 4, y: 12 },
+  { t: 'warp', map: 'ch1', x: 4, y: 24 },
   { t: 'fade', to: 'normal', ms: 500 },
   { t: 'music', track: 'town' },
   { t: 'narr', text: '──E318年。ZAMLTが全階層を管理する時代。\n　低階層出身の王者・アルファ・ケインが、解放の狼煙を上げようとしていた。' }
@@ -208,7 +208,7 @@ boss_executor: [
   { t: 'msg', name: 'ミナ', text: 'ええ、観測値が戻ってきた。\nここからの歴史は、ちゃんと「ある」わ。' },
   { t: 'archive', id: 6 },
   { t: 'fade', to: 'black', ms: 600 },
-  { t: 'warp', map: 'hub', x: 18, y: 4 },
+  { t: 'warp', map: 'hub', x: 3, y: 4 },
   { t: 'fade', to: 'normal', ms: 600 },
   { t: 'music', track: 'hub' },
   { t: 'join', who: 'mina' },
@@ -225,7 +225,7 @@ gate_go_2: [
   { t: 'card', num: '第二章', name: '黄金の皇帝', sub: 'E340 ─ セリア黄金期 ─ セリノポリス' },
   { t: 'archive', id: 7 },
   { t: 'fade', to: 'black', ms: 500 },
-  { t: 'warp', map: 'ch2', x: 4, y: 12 },
+  { t: 'warp', map: 'ch2', x: 4, y: 25 },
   { t: 'fade', to: 'normal', ms: 500 },
   { t: 'music', track: 'town' },
   { t: 'narr', text: '──E340年。ギガポリスは「セリノポリス」と改名された。\n　新次元皇帝セリアの黄金期。大通りは金と活気に満ちている。' }
@@ -268,7 +268,7 @@ gate_go_3: [
   { t: 'card', num: '第三章', name: '大戦の嵐', sub: 'E375 ─ アポロン・ドミニオン大戦' },
   { t: 'archive', id: 8 },
   { t: 'fade', to: 'black', ms: 500 },
-  { t: 'warp', map: 'ch3', x: 4, y: 12 },
+  { t: 'warp', map: 'ch3', x: 4, y: 26 },
   { t: 'fade', to: 'normal', ms: 500 },
   { t: 'music', track: 'dungeon' },
   { t: 'narr', text: '──E375年。アポロン・ドミニオン大戦の戦線。\n　砂塵と鉄の匂い。地平線には、焼けた首都の影。' }
@@ -314,7 +314,7 @@ gate_go_4: [
   { t: 'card', num: '第四章', name: 'スライム危機', sub: 'E385 ─ アンダーシティ第6層' },
   { t: 'archive', id: 9 },
   { t: 'fade', to: 'black', ms: 500 },
-  { t: 'warp', map: 'ch4', x: 4, y: 12 },
+  { t: 'warp', map: 'ch4', x: 4, y: 26 },
   { t: 'fade', to: 'normal', ms: 500 },
   { t: 'music', track: 'dungeon' },
   { t: 'narr', text: '──E385年。アンダーシティ第6層。\n　配管から漏れる緑色の粘液。高次元の生態が、下層を飲み込み始めている。' }
@@ -367,7 +367,7 @@ gate_go_5: [
   { t: 'card', num: '第五章', name: '暗黒の時代', sub: 'E400 ─ エヴァトロン支配' },
   { t: 'archive', id: 10 },
   { t: 'fade', to: 'black', ms: 500 },
-  { t: 'warp', map: 'ch5', x: 4, y: 12 },
+  { t: 'warp', map: 'ch5', x: 4, y: 26 },
   { t: 'fade', to: 'normal', ms: 500 },
   { t: 'music', track: 'dungeon' },
   { t: 'narr', text: '──E400年。エヴァトロンがE16を占領した。\n　惑星の名は勝手に「Evapolis」と改称され、AURALISは解体された。', }
@@ -379,6 +379,14 @@ ch5_dark_intro: [
   { t: 'msg', name: 'ジェン', text: '歴史の事実は、変えられない。\nでも──見て見ぬふりも、しない。', },
   { t: 'msg', name: 'レイラ', text: '……この先の未来で、私は冷凍保存される。\nエヴァトロンに捕まりたくないから。', },
   { t: 'msg', name: 'レイラ', text: 'だからこそ、この時代のことは知ってる。\n統治者ヴァイロン・デアクス──ここにいる。' }
+],
+
+ch5_join_myu: [
+  { t: 'join', who: 'myu' },
+  { t: 'toast', text: 'ミュ が仲間に加わった！' },
+  { t: 'msg', name: 'ミュ', text: '……ミュだ。Trap Dungeon 最深部の記録を持つ、探査の英雄。' },
+  { t: 'msg', name: 'ミュ', text: 'エヴァトロンの要塞構造、すでに解析済みだ。\n内郭ゲートは北。番機グリム・ダルゴスを落とせば開く。' },
+  { t: 'msg', name: 'レイラ', text: '頼もしいね。……一緒に行こう、ミュ。' }
 ],
 
 boss_dalgos: [
@@ -417,7 +425,7 @@ gate_go_6: [
   { t: 'card', num: '第六章', name: 'Irisの時代', sub: 'E490 ─ 東大陸クレセント ─ ヴァーミリオン' },
   { t: 'archive', id: 11 },
   { t: 'fade', to: 'black', ms: 500 },
-  { t: 'warp', map: 'ch6', x: 4, y: 12 },
+  { t: 'warp', map: 'ch6', x: 4, y: 26 },
   { t: 'fade', to: 'normal', ms: 500 },
   { t: 'music', track: 'town' },
   { t: 'narr', text: '──E490年。エヴァトロン崩壊から15年。\n　東大陸クレセントではIRISランキングが秩序を定める。第1位の名は、ヴァーミリオン。' }
@@ -441,7 +449,7 @@ boss_fiona: [
   { t: 'msg', name: 'アイリス', text: '第2位の誇り、受け取ったわ。', },
   { t: 'archive', id: 11 },
   { t: 'fade', to: 'black', ms: 600 },
-  { t: 'warp', map: 'hub', x: 18, y: 4 },
+  { t: 'warp', map: 'hub', x: 21, y: 4 },
   { t: 'fade', to: 'normal', ms: 600 },
   { t: 'music', track: 'hub' },
   { t: 'msg', name: 'ミナ', text: '第六章、修復完了。\n……次は、私の故郷の章になるわ。覚悟して。', },
@@ -456,7 +464,7 @@ gate_go_7: [
   { t: 'card', num: '第七章', name: '金色の粛清', sub: 'E509 ─ ノスタルジア・コロニー' },
   { t: 'archive', id: 12 },
   { t: 'fade', to: 'black', ms: 500 },
-  { t: 'warp', map: 'ch7', x: 4, y: 12 },
+  { t: 'warp', map: 'ch7', x: 4, y: 25 },
   { t: 'fade', to: 'normal', ms: 500 },
   { t: 'music', track: 'dungeon' },
   { t: 'narr', text: '──E509年。ノスタルジア・コロニー。\n　金色の紋章が町を焼いた夜の、その直後。' }
@@ -474,7 +482,7 @@ boss_goldenvenom: [
   { t: 'msg', name: 'レイラ', text: 'うん。……帰ろう、ミナ。歴史は、ちゃんと続いてる。', },
   { t: 'archive', id: 12 },
   { t: 'fade', to: 'black', ms: 600 },
-  { t: 'warp', map: 'hub', x: 21, y: 4 },
+  { t: 'warp', map: 'hub', x: 24, y: 4 },
   { t: 'fade', to: 'normal', ms: 600 },
   { t: 'music', track: 'hub' },
   { t: 'msg', name: 'ミナ', text: '第七章、修復完了。', },
@@ -490,7 +498,7 @@ gate_go_8: [
   { t: 'card', num: '第八章', name: '次元の彼方', sub: 'AD2026 ─ Tier Δ ─ 美咲が丘' },
   { t: 'archive', id: 13 },
   { t: 'fade', to: 'black', ms: 500 },
-  { t: 'warp', map: 'ch8', x: 4, y: 12 },
+  { t: 'warp', map: 'ch8', x: 4, y: 25 },
   { t: 'fade', to: 'normal', ms: 500 },
   { t: 'music', track: 'town' },
   { t: 'narr', text: '──AD2026年。Tier Δ。「私たちの世界」。\n　美咲が丘。通学路、コンビニ、放課後の匂い。歪みは、日常のど真ん中にいる。' }
@@ -515,7 +523,7 @@ boss_possessed: [
   { t: 'msg', name: 'カステリア', text: '……よかった。日常は、ちゃんと戻ってくる。', },
   { t: 'archive', id: 13 },
   { t: 'fade', to: 'black', ms: 600 },
-  { t: 'warp', map: 'hub', x: 24, y: 4 },
+  { t: 'warp', map: 'hub', x: 27, y: 4 },
   { t: 'fade', to: 'normal', ms: 600 },
   { t: 'music', track: 'hub' },
   { t: 'msg', name: 'ミナ', text: '第八章、修復完了。残るは「Trap Dungeon」と──最後の門。', },
@@ -530,7 +538,7 @@ gate_go_9: [
   { t: 'card', num: '第九章', name: 'Trap Dungeon', sub: 'E522 ─ 検証的迷宮' },
   { t: 'archive', id: 14 },
   { t: 'fade', to: 'black', ms: 500 },
-  { t: 'warp', map: 'trap1', x: 4, y: 14 },
+  { t: 'warp', map: 'trap1', x: 4, y: 26 },
   { t: 'fade', to: 'normal', ms: 500 },
   { t: 'music', track: 'dungeon' },
   { t: 'narr', text: '──Trap Dungeon。「測定」でできた迷宮。\n　深く潜るほど、存在は「上限」を問われ始める。' }
@@ -556,7 +564,7 @@ boss_abyssreais: [
   { t: 'narr', text: '──最深部の「門」が、ゆっくりと閉じていく。\n　だが、壁の一枚にだけ、まだ微かな裂け目が。' },
   { t: 'archive', id: 14 },
   { t: 'fade', to: 'black', ms: 600 },
-  { t: 'warp', map: 'hub', x: 27, y: 4 },
+  { t: 'warp', map: 'hub', x: 30, y: 4 },
   { t: 'fade', to: 'normal', ms: 600 },
   { t: 'music', track: 'hub' },
   { t: 'msg', name: 'ミナ', text: '第九章、修復完了。\n……最後よ。Tier Ω──「オメガの回廊」。', },
@@ -599,7 +607,7 @@ gate_go_10: [
   { t: 'card', num: '終章', name: 'オメガの回廊', sub: 'E528 ─ Tier Ω ─ 高次元領域' },
   { t: 'archive', id: 19 },
   { t: 'fade', to: 'black', ms: 500 },
-  { t: 'warp', map: 'ch10', x: 4, y: 12 },
+  { t: 'warp', map: 'ch10', x: 4, y: 25 },
   { t: 'fade', to: 'normal', ms: 500 },
   { t: 'music', track: 'final' },
   { t: 'narr', text: '──Tier Ω。8〜11次元の高次元領域。\n　歴史の継ぎ目すべてが、ここに綴じられている。' }
@@ -643,6 +651,9 @@ epilogue: [
   { t: 'msg', name: 'ミナ', text: '……報告、完了。\nみんな、ありがとう。そして──おかえりなさい。', },
   { t: 'archive', id: 20 },
   { t: 'flag', key: 'game_clear', val: true },
+  { t: 'flag', key: 'chapter', val: 11 },
+  { t: 'warp', map: 'hub', x: 18, y: 18 },
+  { t: 'clearAuto' },
   { t: 'endgame' }
 ],
 

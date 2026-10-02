@@ -1,6 +1,6 @@
 {
   "name": "gamemina-chronicle",
-  "version": "1.4.0",
+  "version": "2.0.0",
   "private": true,
   "description": "GAMEMINA CHRONICLE ─ Eternal Dominion Universe をなぞるFF風RPG (PWA)。内蔵自動テスト環境完備。",
   "scripts": {

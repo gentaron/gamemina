@@ -76,7 +76,8 @@ window.GM = window.GM || {};
     z: 'a', Z: 'a', Enter: 'a', ' ': 'a',
     x: 'b', X: 'b', Escape: 'b', Backspace: 'b',
     c: 'menu', C: 'menu', m: 'menu', M: 'menu', Tab: 'menu',
-    f: 'fs', F: 'fs'
+    f: 'fs', F: 'fs',
+    q: 'map', Q: 'map'
   };
   window.addEventListener('keydown', (e) => {
     const btn = KEYMAP[e.key];
@@ -84,6 +85,7 @@ window.GM = window.GM || {};
     e.preventDefault();
     GM.AUDIO.unlock();
     if (btn === 'fs') { GM.toggleFullscreen(); return; }
+    if (btn === 'map') { if (!GM.uiOwner && GM.toggleMinimap) GM.toggleMinimap(); return; }
     if (!Input.kb[btn]) { Input.kb[btn] = true; Input._sync(); Input.push(btn); }
     else if (isDirKey(btn)) {
       // OSリピートはキュー最大2に制限（入力滞留バグ防止）
@@ -93,7 +95,7 @@ window.GM = window.GM || {};
   });
   window.addEventListener('keyup', (e) => {
     const btn = KEYMAP[e.key];
-    if (btn && btn !== 'fs') { Input.kb[btn] = false; Input._sync(); }
+    if (btn && btn !== 'fs' && btn !== 'map') { Input.kb[btn] = false; Input._sync(); }
   });
   /* Alt+Tab等でフォーカスが外れたら全キー解放（歩き続けバグ防止） */
   window.addEventListener('blur', () => Input.releaseAll());

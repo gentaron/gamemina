@@ -88,135 +88,226 @@
   }
   /* 歩行可能判定（field.js の SOLID と同一定義。GM._SOLID があればそれを優先） */
   function solidSet(GM) {
-    return GM._SOLID || new Set(['#', ' ', 'w', 't', 'r', 'c', 'C', 'b', 'p', 'm', 'x', 'o', '*', 'T']);
+    return GM._SOLID || GM._MAP_SOLID || new Set(['#', ' ', 'w', 't', 'r', 'c', 'C', 'b', 'p', 'm', 'x', 'o', '*', 'T', 'v', 'P', 'F', 'L', 'u', 'K']);
   }
   function tileAt(map, x, y) {
     const row = map.map[y];
     if (!row) return '#';
     return row[x] != null ? row[x] : '#';
   }
-  /* BFS 到達集合（entry から計算） */
-  function reachableFrom(GM, map, sx, sy) {
+  /* BFS 到達集合（entry から計算）。opts.obstacles: 追加の障害物キー集合 */
+  function reachableFrom(GM, map, sx, sy, opts) {
     const SOLID = solidSet(GM);
+    const obs = (opts && opts.obstacles) || null;
     const w = map._w, h = map._h;
     const seen = new Set();
     const q = [[sx, sy]];
     seen.add(sx + ',' + sy);
     while (q.length) {
       const [cx, cy] = q.shift();
-      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      for (const [dx, dy] of DIRS) {
         const nx = cx + dx, ny = cy + dy, k = nx + ',' + ny;
         if (nx < 0 || ny < 0 || nx >= w || ny >= h || seen.has(k)) continue;
         if (SOLID.has(tileAt(map, nx, ny))) continue;
+        if (obs && obs.has(k)) continue;
         seen.add(k);
         q.push([nx, ny]);
       }
     }
     return seen;
   }
+  const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
   function adjReach(reach, x, y) {
-    return reach.has(x + ',' + y) ||
-      [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => reach.has((x + dx) + ',' + (y + dy)));
+    return reach.has(x + ',' + y) || DIRS.some(([dx, dy]) => reach.has((x + dx) + ',' + (y + dy)));
+  }
+  /* カウンター越しに話せる位置（'C' を挟んだ反対側）から届くか */
+  function counterReach(map, reach, x, y) {
+    return DIRS.some(([dx, dy]) => tileAt(map, x + dx, y + dy) === 'C' && reach.has((x + 2 * dx) + ',' + (y + 2 * dy)));
+  }
+  /* マップ解析: NPC・生存ボス・ロック中イベントを障害物として扱う
+     defeated: 撃破済みボス id の Set（null なら「全員生存・全ロック有効」） */
+  function analyze(GM, map, defeated) {
+    defeated = defeated || new Set();
+    const npc = new Set((map.npcs || []).map((n) => n.x + ',' + n.y));
+    const locked = (ev) => (ev.requires && !defeated.has(ev.requires)) || (ev.requiresFlag && !defeated.has('flag:' + ev.requiresFlag));
+    const block = new Set(npc);
+    (map.events || []).forEach((ev) => {
+      if (ev.type === 'boss' && !defeated.has(ev.boss)) block.add(ev.x + ',' + ev.y);
+      if ((ev.type === 'barrier' || ev.requires || ev.requiresFlag) && locked(ev)) block.add(ev.x + ',' + ev.y);
+    });
+    const reach = reachableFrom(GM, map, map.entry.x, map.entry.y, { obstacles: block });
+    return { reach, block, npc, locked };
+  }
+  /* 全ロック解除・全ボス撃破後（＝最大到達域） */
+  function allDefeated(GM) {
+    const s = new Set(Object.keys(GM.ENEMIES));
+    s.add('flag:game_clear');
+    return s;
+  }
+  function stepEventAt(map, x, y) {
+    return (map.events || []).some((e) => e.x === x && e.y === y && ['exit', 'gate', 'gate2', 'boss', 'trigger', 'barrier'].includes(e.type));
+  }
+  function landingOk(GM, map, x, y) {
+    const SOLID = solidSet(GM);
+    if (x < 0 || y < 0 || x >= map._w || y >= map._h) return 'マップ範囲外';
+    if (SOLID.has(tileAt(map, x, y))) return `通行不可タイル '${tileAt(map, x, y)}'`;
+    if (stepEventAt(map, x, y)) return 'イベント上（ワープ/戦闘の即時再発火）';
+    if ((map.npcs || []).some((n) => n.x === x && n.y === y)) return 'NPC と重なる';
+    return null;
   }
 
   /* ============================================================
-     SUITE 1: マップデータ整合性
+     SUITE 1: マップデータ整合性（v3: 書いたまま正しいことを保証）
      ============================================================ */
   suite('MAP ─ マップ整合性', function (t) {
 
-    t('全マップの行幅が矩形になっている', () => {
+    t('全マップの行幅が矩形・初期化時の整合問題ゼロ（自動リロケート不要）', () => {
       const GM = requireGM();
+      const bad = [];
       for (const id in GM.MAPS) {
         const def = GM.MAPS[id];
-        const w = def._w || Math.max(...def.map.map((r) => r.length));
-        def.map.forEach((row, i) => {
-          if (row.length !== w) throw new Error(`${id} 行${i} の幅が ${row.length} (期待 ${w})`);
-        });
+        const w = def.map[0].length;
+        def.map.forEach((row, i) => { if (row.length !== w) bad.push(`${id} 行${i} 幅${row.length}≠${w}`); });
+        (def._issues || []).forEach((m) => bad.push(`${id}: ${m}`));
+      }
+      if (bad.length) throw new Error(bad.join(' / '));
+    });
+
+    t('外周が閉じている（出口以外でマップ端に穴が無い）', () => {
+      const GM = requireGM();
+      const SOLID = solidSet(GM);
+      for (const id in GM.MAPS) {
+        const def = GM.MAPS[id];
+        const ok = (x, y) => SOLID.has(tileAt(def, x, y)) || (def.events || []).some((e) => e.type === 'exit' && e.x === x && e.y === y);
+        for (let x = 0; x < def._w; x++) if (!ok(x, 0) || !ok(x, def._h - 1)) throw new Error(`${id}: 外周 x=${x} が開いている`);
+        for (let y = 0; y < def._h; y++) if (!ok(0, y) || !ok(def._w - 1, y)) throw new Error(`${id}: 外周 y=${y} が開いている`);
       }
     });
 
-    t('exit イベントの行き先マップが全て実在する', () => {
+    t('exit の行き先マップが実在し、着地点が厳密に安全（safeLanding 補正に頼らない）', () => {
       const GM = requireGM();
       for (const id in GM.MAPS) {
         (GM.MAPS[id].events || []).forEach((ev) => {
           if (ev.type !== 'exit') return;
           const to = ev.to && ev.to[0];
-          if (!to || !GM.MAPS[to]) throw new Error(`${id} (${ev.x},${ev.y}) → 存在しないマップ "${to}"`);
+          const dst = GM.MAPS[to];
+          if (!dst) throw new Error(`${id} (${ev.x},${ev.y}) → 存在しないマップ "${to}"`);
+          if (ev.to.length < 3) throw new Error(`${id} (${ev.x},${ev.y}) → 着地座標が未指定`);
+          const why = landingOk(GM, dst, ev.to[1], ev.to[2]);
+          if (why) throw new Error(`${id} (${ev.x},${ev.y}) → ${to}(${ev.to[1]},${ev.to[2]}): ${why}`);
         });
       }
     });
 
-    t('出口の往復閉包: hub 以外の全マップに出口が存在する（戻れない部屋ゼロ）', () => {
+    t('出入口の往復整合: 着地点のすぐ近くに「来た場所へ戻る出口」がある', () => {
       const GM = requireGM();
       for (const id in GM.MAPS) {
-        if (id === 'hub') continue;
-        const hasExit = (GM.MAPS[id].events || []).some((e) => e.type === 'exit' || e.type === 'gate');
-        if (!hasExit) throw new Error(`${id}: 出口もゲートも無い ─ 入ったら出られない`);
+        (GM.MAPS[id].events || []).forEach((ev) => {
+          if (ev.type !== 'exit') return;
+          const [to, lx, ly] = ev.to;
+          const dst = GM.MAPS[to];
+          if (to === 'hub') {
+            // ハブへ戻る出口は、その章のゲートの真正面に着地する
+            const g = (dst.events || []).find((e) => e.type === 'gate' && e.x === lx && Math.abs(e.y - ly) <= 2);
+            if (!g) throw new Error(`${id} → hub(${lx},${ly}): 対応するゲートの正面ではない`);
+            const ch = GM.CHAPTERS[g.gate];
+            if (!ch) throw new Error(`${id}: ゲート${g.gate} の章定義が無い`);
+            return;
+          }
+          const back = (dst.events || []).some((e) => e.type === 'exit' && e.to[0] === id && Math.abs(e.x - lx) + Math.abs(e.y - ly) <= 2);
+          if (!back) throw new Error(`${id} → ${to}(${lx},${ly}): 着地点の2マス以内に ${id} へ戻る出口が無い`);
+        });
       }
     });
 
-    t('gate イベントに対応する gate_go_N スクリプトが存在する', () => {
+    t('gate イベントに対応する gate_go_N スクリプトがあり、CHAPTERS の帰還点がゲート正面', () => {
       const GM = requireGM();
       for (const id in GM.MAPS) {
         (GM.MAPS[id].events || []).forEach((ev) => {
           if (ev.type !== 'gate') return;
           if (!GM.STORY['gate_go_' + ev.gate]) throw new Error(`${id}: gate_go_${ev.gate} が未定義`);
+          const ch = GM.CHAPTERS[ev.gate];
+          if (ch && (ch.hx !== ev.x || Math.abs(ch.hy - ev.y) > 2)) throw new Error(`CHAPTERS[${ev.gate}] の帰還点 (${ch.hx},${ch.hy}) がゲート (${ev.x},${ev.y}) の正面ではない`);
         });
       }
     });
 
-    t('boss イベントの敵とスクリプトが実在する', () => {
+    t('ストーリーの warp 着地点がすべて厳密に安全', () => {
+      const GM = requireGM();
+      for (const sid in GM.STORY) {
+        GM.STORY[sid].forEach((st) => {
+          if (st.t !== 'warp' || st.x == null) return;
+          const map = GM.MAPS[st.map];
+          if (!map) throw new Error(`${sid}: warp 先 ${st.map} 不明`);
+          const why = landingOk(GM, map, st.x, st.y);
+          if (why) throw new Error(`${sid}: warp ${st.map}(${st.x},${st.y}) → ${why}`);
+        });
+      }
+    });
+
+    t('boss イベントの敵・スクリプト・フィールド表示用ドット絵が実在する', () => {
       const GM = requireGM();
       for (const id in GM.MAPS) {
         (GM.MAPS[id].events || []).forEach((ev) => {
           if (ev.type !== 'boss') return;
-          if (!GM.ENEMIES[ev.boss]) throw new Error(`${id}: 敵 "${ev.boss}" が未定義`);
+          const e = GM.ENEMIES[ev.boss];
+          if (!e) throw new Error(`${id}: 敵 "${ev.boss}" が未定義`);
           if (!GM.STORY[ev.script]) throw new Error(`${id}: スクリプト "${ev.script}" が未定義`);
+          if (GM.ENEMY_ART && !GM.ENEMY_ART[e.spr]) throw new Error(`${id}: ${ev.boss} のドット絵 "${e.spr}" が無い（フィールドで不可視になる）`);
         });
       }
     });
 
-    t('trigger / shop イベントの参照先が有効', () => {
+    t('trigger / shop / gate2 / requires の参照先が有効', () => {
       const GM = requireGM();
       for (const id in GM.MAPS) {
         (GM.MAPS[id].events || []).forEach((ev) => {
-          if (ev.type === 'trigger' && !GM.STORY[ev.script]) throw new Error(`${id}: trigger "${ev.script}" が未定義`);
+          if ((ev.type === 'trigger' || ev.type === 'gate2') && !GM.STORY[ev.script]) throw new Error(`${id}: ${ev.type} "${ev.script}" が未定義`);
           if (ev.type === 'shop' && !GM.SHOPS[ev.shop]) throw new Error(`${id}: shop${ev.shop} が未定義`);
+          if (ev.requires && !GM.ENEMIES[ev.requires]) throw new Error(`${id}: requires "${ev.requires}" が未定義の敵`);
         });
       }
     });
 
-    t('S タイルとセーブイベントの実体一致', () => {
+    t('S / G タイルとイベントの実体一致', () => {
       const GM = requireGM();
       for (const id in GM.MAPS) {
         const def = GM.MAPS[id];
-        const hasSTile = def.map.some((r) => r.includes('S'));
-        const saves = (def.events || []).filter((e) => e.type === 'save');
-        if (hasSTile && !saves.length) throw new Error(`${id}: S タイルがあるのに save イベントが無い`);
-        saves.forEach((s) => {
-          if (tileAt(def, s.x, s.y) !== 'S') throw new Error(`${id}: save イベント (${s.x},${s.y}) が S タイル上に無い`);
+        for (let y = 0; y < def._h; y++) for (let x = 0; x < def._w; x++) {
+          const ch = tileAt(def, x, y);
+          const evs = (def.events || []).filter((e) => e.x === x && e.y === y);
+          if (ch === 'S' && !evs.some((e) => e.type === 'save')) throw new Error(`${id}: S (${x},${y}) にセーブイベントが無い`);
+          if (ch === 'G' && !evs.some((e) => e.type === 'gate' || e.type === 'gate2')) throw new Error(`${id}: G (${x},${y}) にゲートイベントが無い`);
+        }
+        (def.events || []).forEach((e) => {
+          if (e.type === 'save' && tileAt(def, e.x, e.y) !== 'S') throw new Error(`${id}: save (${e.x},${e.y}) が S タイル上に無い`);
+          if (e.type === 'gate' && tileAt(def, e.x, e.y) !== 'G') throw new Error(`${id}: gate (${e.x},${e.y}) が G タイル上に無い`);
         });
       }
     });
 
-    t('宝箱定義が実在アイテムを指す', () => {
+    t('宝箱定義が実在アイテムを指し、全て * タイル上', () => {
       const GM = requireGM();
       for (const id in GM.MAPS) {
         (GM.MAPS[id].chests || []).forEach((c) => {
           if (!GM.ITEMS[c.item] && !GM.WEAPONS[c.item] && !GM.ARMORS[c.item] && !GM.ACCS[c.item]) {
             throw new Error(`${id} (${c.x},${c.y}): 不明なアイテム "${c.item}"`);
           }
+          if (tileAt(GM.MAPS[id], c.x, c.y) !== '*') throw new Error(`${id} (${c.x},${c.y}): 宝箱が * タイル上に無い`);
         });
       }
     });
 
-    t('NPC のスクリプト/見た目が有効', () => {
+    t('NPC のスクリプト/見た目/ショップ/加入消滅設定が有効', () => {
       const GM = requireGM();
       for (const id in GM.MAPS) {
         (GM.MAPS[id].npcs || []).forEach((n) => {
           if (n.script && !GM.STORY[n.script]) throw new Error(`${id} NPC "${n.name}": "${n.script}" 未定義`);
           const look = typeof n.look === 'string' ? GM.LOOKS[n.look] : n.look;
           if (!look) throw new Error(`${id} NPC "${n.name}": look "${n.look}" 未定義`);
+          if (n.shop != null && !GM.SHOPS[n.shop]) throw new Error(`${id} NPC "${n.name}": shop ${n.shop} 未定義`);
+          if (n.hideIfParty && !GM.CHARACTERS[n.hideIfParty]) throw new Error(`${id} NPC "${n.name}": hideIfParty "${n.hideIfParty}" 不明`);
+          if (!n.script && !n.lines) throw new Error(`${id} NPC "${n.name}": 台詞もスクリプトも無い`);
         });
       }
     });
@@ -241,140 +332,236 @@
      ============================================================ */
   suite('CONNECTIVITY ─ ソフトロック監査', function (t) {
 
-    t('各マップ: entry から全イベント・全NPC・全宝箱に到達できる', () => {
+    t('各マップ: entry から全イベント・全NPC・全宝箱に到達できる（NPC は障害物扱い）', () => {
       const GM = requireGM();
       for (const id in GM.MAPS) {
         const def = GM.MAPS[id];
-        if (!def.entry) throw new Error(`${id}: entry 未計算（normalizeMaps 未実行）`);
-        const reach = reachableFrom(GM, def, def.entry.x, def.entry.y);
+        const { reach } = analyze(GM, def, allDefeated(GM));
         (def.events || []).forEach((ev) => {
           if (!adjReach(reach, ev.x, ev.y)) throw new Error(`${id}: (${ev.x},${ev.y}) の ${ev.type} に到達不可`);
         });
         (def.npcs || []).forEach((n) => {
-          if (!adjReach(reach, n.x, n.y)) throw new Error(`${id}: NPC "${n.name}" (${n.x},${n.y}) に到達不可`);
+          if (!adjReach(reach, n.x, n.y) && !counterReach(def, reach, n.x, n.y)) throw new Error(`${id}: NPC "${n.name}" (${n.x},${n.y}) に話しかけられない`);
         });
         (def.chests || []).forEach((c) => {
-          const adj = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => reach.has((c.x + dx) + ',' + (c.y + dy)));
-          if (!adj) throw new Error(`${id}: 宝箱 (${c.x},${c.y}) に到達不可`);
+          if (!DIRS.some(([dx, dy]) => reach.has((c.x + dx) + ',' + (c.y + dy)))) throw new Error(`${id}: 宝箱 (${c.x},${c.y}) に到達不可`);
         });
       }
     });
 
-    t('各マップ: 全ての出入口（exit/gate）に entry から到達できる', () => {
-      const GM = requireGM();
-      for (const id in GM.MAPS) {
-        const def = GM.MAPS[id];
-        const reach = reachableFrom(GM, def, def.entry.x, def.entry.y);
-        (def.events || []).forEach((ev) => {
-          if (ev.type !== 'exit' && ev.type !== 'gate' && ev.type !== 'gate2') return;
-          if (!adjReach(reach, ev.x, ev.y)) throw new Error(`${id}: ${ev.type} (${ev.x},${ev.y}) に到達不可 ─ 出られない部屋`);
-        });
-      }
-    });
-
-    t('孤立した歩行可能領域（本流から切り離された部屋）が存在しない', () => {
+    t('孤立した歩行可能領域ゼロ（NPC の立ち位置を除く全床が本流に接続）', () => {
       const GM = requireGM();
       const SOLID = solidSet(GM);
       const problems = [];
       for (const id in GM.MAPS) {
         const def = GM.MAPS[id];
-        const w = def._w, h = def._h;
-        const reach = reachableFrom(GM, def, def.entry.x, def.entry.y);
-        const seenAll = new Set();
-        for (let y = 0; y < h; y++) {
-          for (let x = 0; x < w; x++) {
-            const k = x + ',' + y;
-            if (seenAll.has(k) || SOLID.has(tileAt(def, x, y))) continue;
-            const comp = [];
-            const q = [[x, y]];
-            seenAll.add(k);
-            while (q.length) {
-              const [cx, cy] = q.shift();
-              comp.push([cx, cy]);
-              for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-                const nx = cx + dx, ny = cy + dy, nk = nx + ',' + ny;
-                if (nx < 0 || ny < 0 || nx >= w || ny >= h || seenAll.has(nk)) continue;
-                if (SOLID.has(tileAt(def, nx, ny))) continue;
-                seenAll.add(nk);
-                q.push([nx, ny]);
-              }
-            }
-            if (!comp.some(([cx, cy]) => reach.has(cx + ',' + cy))) {
-              problems.push(`${id}: ${comp.length}タイル (${comp[0]})`);
-            }
-          }
+        const { reach, npc } = analyze(GM, def, allDefeated(GM));
+        for (let y = 0; y < def._h; y++) for (let x = 0; x < def._w; x++) {
+          const k = x + ',' + y;
+          if (SOLID.has(tileAt(def, x, y)) || npc.has(k) || reach.has(k)) continue;
+          problems.push(`${id}(${x},${y})`);
         }
       }
-      if (problems.length) t.warn('本流に接続しない領域 → ' + problems.join(' / '));
-    }, ['warn']);
-
-    t('章進行グラフ: 第1章→第10章まで順に完走可能（ストーリー全体の完走保証）', () => {
-      const GM = requireGM();
-      /* exit を辿って到達できるマップ閉包（ch2→colosseum のような多段構成をカバー） */
-      function mapClosure(startId) {
-        const seen = new Set([startId]);
-        const q = [startId];
-        while (q.length) {
-          const curId = q.shift();
-          (GM.MAPS[curId].events || []).forEach((ev) => {
-            if (ev.type !== 'exit') return;
-            const to = ev.to && ev.to[0];
-            if (to && GM.MAPS[to] && !seen.has(to)) { seen.add(to); q.push(to); }
-          });
-        }
-        return seen;
-      }
-      for (let n = 1; n <= 10; n++) {
-        const sc = GM.STORY['gate_go_' + n];
-        if (!sc) throw new Error(`gate_go_${n} 未定義 ─ 第${n}章に入れない`);
-        const warp = sc.find((s) => s.t === 'warp');
-        if (!warp || !GM.MAPS[warp.map]) throw new Error(`gate_go_${n} の warp 先が不正`);
-        const closure = mapClosure(warp.map);
-        if (n < 10) {
-          // 閉包内の全マップから「ボスに到達でき、勝利で hub 復帰 + 次章ゲート解禁」を見つける
-          let cleared = null;
-          for (const mapId of closure) {
-            const mapDef = GM.MAPS[mapId];
-            const reach = reachableFrom(GM, mapDef, mapDef.entry.x, mapDef.entry.y);
-            for (const b of (mapDef.events || []).filter((e) => e.type === 'boss')) {
-              if (!adjReach(reach, b.x, b.y)) continue;
-              const steps = GM.STORY[b.script] || [];
-              if (!steps.some((s) => s.t === 'warp' && s.map === 'hub')) continue;
-              const gate = steps.find((s) => s.t === 'openGate');
-              if (!gate || gate.n !== n + 1) continue;
-              if (!GM.STORY['gate_go_' + gate.n]) continue;
-              cleared = { mapId, boss: b.boss, script: b.script };
-              break;
-            }
-            if (cleared) break;
-          }
-          if (!cleared) throw new Error(`第${n}章: warp先閉包内に「ボス撃破→hub帰還→第${n + 1}章解禁」が完結する経路が無い`);
-        }
-      }
-      // 終章: オメガと DIANA の双方に到達できる
-      const ch10 = GM.MAPS['ch10'];
-      const reach10 = reachableFrom(GM, ch10, ch10.entry.x, ch10.entry.y);
-      (ch10.events || []).filter((e) => e.type === 'boss').forEach((b) => {
-        if (!adjReach(reach10, b.x, b.y)) throw new Error(`ch10: 最終ボス (${b.boss}) に到達不可`);
-      });
+      if (problems.length) throw new Error('本流に接続しない床 → ' + problems.slice(0, 12).join(' ') + (problems.length > 12 ? ` …他${problems.length - 12}` : ''));
     });
 
-    t('safeLanding: 壁・範囲外・イベント上の座標を安全地点へ補正できる', () => {
+    t('うろつく NPC がどこへ動いても道を塞がない', () => {
       const GM = requireGM();
-      // 壁の中
+      for (const id in GM.MAPS) {
+        const def = GM.MAPS[id];
+        (def.npcs || []).forEach((n) => {
+          if (!n.wander) return;
+          const base = analyze(GM, def, allDefeated(GM));
+          for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) {
+            if (Math.abs(dx) + Math.abs(dy) > 3) continue;
+            const x = n.x + dx, y = n.y + dy, k = x + ',' + y;
+            if (!base.reach.has(k) || stepEventAt(def, x, y) || (def.events || []).some((e) => e.x === x && e.y === y)) continue;
+            const obs = new Set(base.block); obs.delete(n.x + ',' + n.y); obs.add(k);
+            const r = reachableFrom(GM, def, def.entry.x, def.entry.y, { obstacles: obs });
+            if (k === def.entry.x + ',' + def.entry.y) continue;
+            const lost = (def.events || []).find((ev) => !adjReach(r, ev.x, ev.y));
+            if (lost) throw new Error(`${id}: NPC "${n.name}" が (${x},${y}) に来ると ${lost.type}(${lost.x},${lost.y}) へ行けなくなる`);
+          }
+        });
+      }
+    });
+
+    t('章進行シミュレーション: 封印の順序どおりにボスを倒して第1章→終章まで完走できる', () => {
+      const GM = requireGM();
+      const bossScriptOpens = (script) => {
+        const st = GM.STORY[script] || [];
+        const g = st.find((s) => s.t === 'openGate');
+        const toHub = st.some((s) => s.t === 'warp' && s.map === 'hub');
+        const ending = st.some((s) => s.t === 'script' && GM.STORY[s.id] && GM.STORY[s.id].some((x) => x.t === 'endgame'));
+        return { gate: g && g.n, toHub, ending };
+      };
+      const runChapter = (startMap, defeated) => {
+        // 撃破済み集合が増えなくなるまで「到達可能な生存ボスを倒す」を繰り返す
+        const log = [];
+        for (let guard = 0; guard < 20; guard++) {
+          const seen = new Set([startMap]);
+          const q = [startMap];
+          const found = [];
+          while (q.length) {
+            const mid = q.shift();
+            const def = GM.MAPS[mid];
+            const { reach } = analyze(GM, def, defeated);
+            (def.events || []).forEach((ev) => {
+              if (!adjReach(reach, ev.x, ev.y)) return;
+              if (ev.type === 'exit' && !(ev.requires && !defeated.has(ev.requires))) {
+                const to = ev.to[0];
+                if (to !== 'hub' && !seen.has(to)) { seen.add(to); q.push(to); }
+              }
+              if (ev.type === 'boss' && !defeated.has(ev.boss)) found.push({ mid, ev });
+            });
+          }
+          if (!found.length) return { log, defeated };
+          const { mid, ev } = found[0];
+          defeated.add(ev.boss);
+          log.push(`${mid}:${ev.boss}`);
+          const r = bossScriptOpens(ev.script);
+          if (r.gate || r.ending) return { log, defeated, opened: r.gate, ending: r.ending };
+        }
+        return { log, defeated };
+      };
+      const defeated = new Set(['bugboss']);
+      for (let n = 1; n <= 10; n++) {
+        const sc = GM.STORY['gate_go_' + n];
+        const warp = sc && sc.find((s) => s.t === 'warp');
+        if (!warp || !GM.MAPS[warp.map]) throw new Error(`gate_go_${n} の warp 先が不正`);
+        const r = runChapter(warp.map, defeated);
+        if (n < 10 && r.opened !== n + 1) throw new Error(`第${n}章: 撃破経路 [${r.log.join(' → ')}] の後に第${n + 1}章ゲートが開かない`);
+        if (n === 10 && !r.ending) throw new Error(`終章: 撃破経路 [${r.log.join(' → ')}] でエンディングに到達しない`);
+      }
+    });
+
+    t('封印は「先に倒すべきボス」を倒すまで本当に閉じている（順序破りの抜け道ゼロ）', () => {
+      const GM = requireGM();
+      for (const id in GM.MAPS) {
+        const def = GM.MAPS[id];
+        const locks = (def.events || []).filter((e) => e.requires);
+        if (!locks.length) continue;
+        const { reach } = analyze(GM, def, new Set());
+        const open = analyze(GM, def, allDefeated(GM)).reach;
+        locks.forEach((lk) => {
+          // 障壁型の封印は「何か」を守っていて、ロック中は迂回できない
+          if (lk.type === 'barrier') {
+            const guarded = (def.events || []).filter((e) => e !== lk && adjReach(open, e.x, e.y) && !adjReach(reach, e.x, e.y));
+            if (!guarded.length) throw new Error(`${id}: 封印 (${lk.x},${lk.y}) は迂回できる／何も守っていない`);
+          }
+          // 必要なボスは封印を開けなくても倒しに行ける
+          const boss = Object.values(GM.MAPS).some((m) => (m.events || []).some((e) => e.type === 'boss' && e.boss === lk.requires));
+          if (!boss) throw new Error(`${id}: 封印の解除条件 ${lk.requires} を満たすボスがどこにもいない`);
+          const here = (def.events || []).find((e) => e.type === 'boss' && e.boss === lk.requires);
+          if (here && !adjReach(reach, here.x, here.y)) throw new Error(`${id}: ${lk.requires} が封印の内側にいて倒せない（詰み）`);
+        });
+      }
+    });
+
+    t('safeLanding: 壁・範囲外・イベント上の座標を安全地点へ補正できる（旧セーブ互換の保険）', () => {
+      const GM = requireGM();
       const hub = GM.MAPS['hub'];
       const fix1 = GM.safeLanding(hub, 1, 1); // (1,1) は壁
       if (GM.isSolid(hub, fix1.x, fix1.y)) throw new Error(`壁から脱出できていない: (${fix1.x},${fix1.y})`);
-      // 範囲外
-      const u0b = GM.MAPS['under0b']; // 12行しかないマップ
-      const fix2 = GM.safeLanding(u0b, 15, 17); // y=17 は範囲外
+      const u0b = GM.MAPS['under0b'];
+      const fix2 = GM.safeLanding(u0b, 15, 40); // 範囲外
       if (GM.isSolid(u0b, fix2.x, fix2.y)) throw new Error(`範囲外座標の補正に失敗: (${fix2.x},${fix2.y})`);
-      // 出口イベント上への着地は避けられる
       const ch1 = GM.MAPS['ch1'];
       const exitEv = (ch1.events || []).find((e) => e.type === 'exit');
       const fix3 = GM.safeLanding(ch1, exitEv.x, exitEv.y);
       const onEv = (ch1.events || []).some((e) => e.x === fix3.x && e.y === fix3.y && (e.type === 'exit' || e.type === 'boss'));
       if (onEv) throw new Error('出口イベント上に着地してしまう（ワープ無限ループの危険）');
+    });
+  });
+
+  /* ============================================================
+     SUITE 2b: レベルデザイン品質（「適当なマップ」の機械的排除）
+     ============================================================ */
+  suite('LEVEL DESIGN ─ 行き止まり・導線品質', function (t) {
+
+    t('無意味な行き止まりゼロ: 袋小路の先には必ず宝箱/NPC/イベントがある', () => {
+      const GM = requireGM();
+      const problems = [];
+      for (const id in GM.MAPS) {
+        const def = GM.MAPS[id];
+        const { reach } = analyze(GM, def, allDefeated(GM));
+        const poi = new Set();
+        (def.events || []).forEach((e) => poi.add(e.x + ',' + e.y));
+        (def.npcs || []).forEach((n) => poi.add(n.x + ',' + n.y));
+        (def.chests || []).forEach((c) => poi.add(c.x + ',' + c.y));
+        const useful = (x, y) => poi.has(x + ',' + y) || DIRS.some(([dx, dy]) => poi.has((x + dx) + ',' + (y + dy))) || (x === def.entry.x && y === def.entry.y);
+        const alive = new Set(reach);
+        let changed = true;
+        const pruned = [];
+        while (changed) {
+          changed = false;
+          for (const k of [...alive]) {
+            const [x, y] = k.split(',').map(Number);
+            if (useful(x, y)) continue;
+            const deg = DIRS.filter(([dx, dy]) => alive.has((x + dx) + ',' + (y + dy))).length;
+            if (deg <= 1) { alive.delete(k); pruned.push(k); changed = true; }
+          }
+        }
+        if (pruned.length) problems.push(`${id}: ${pruned.slice(0, 6).join(' ')}${pruned.length > 6 ? ' …' : ''}`);
+      }
+      if (problems.length) throw new Error('何も無い袋小路 → ' + problems.join(' / '));
+    });
+
+    t('ボスのいるマップには必ずセーブ結晶がある（ボス直前で記録できる）', () => {
+      const GM = requireGM();
+      for (const id in GM.MAPS) {
+        const def = GM.MAPS[id];
+        if (!(def.events || []).some((e) => e.type === 'boss')) continue;
+        if (!(def.events || []).some((e) => e.type === 'save')) throw new Error(`${id}: ボスがいるのにセーブ結晶が無い`);
+      }
+    });
+
+    t('各章の探索範囲に補給手段（ショップ）がある', () => {
+      const GM = requireGM();
+      for (let n = 1; n <= 10; n++) {
+        const start = GM.CHAPTERS[n].map;
+        const seen = new Set([start]); const q = [start];
+        let shop = false;
+        while (q.length) {
+          const m = GM.MAPS[q.shift()];
+          if ((m.npcs || []).some((x) => x.shop != null) || (m.events || []).some((e) => e.type === 'shop')) shop = true;
+          (m.events || []).forEach((e) => { if (e.type === 'exit' && e.to[0] !== 'hub' && !seen.has(e.to[0])) { seen.add(e.to[0]); q.push(e.to[0]); } });
+        }
+        if (!shop) throw new Error(`第${n}章: 章内にショップが無い`);
+      }
+    });
+
+    t('仲間の加入イベントが全員分存在する（8人全員が加入可能）', () => {
+      const GM = requireGM();
+      const joined = new Set();
+      for (const sid in GM.STORY) GM.STORY[sid].forEach((s) => { if (s.t === 'join') joined.add(s.who); });
+      Object.keys(GM.CHARACTERS).forEach((c) => { if (!joined.has(c)) throw new Error(`${c} が加入するスクリプトが無い`); });
+    });
+
+    t('仲間加入トリガーは迂回不可（先へ進むには必ず踏む）', () => {
+      const GM = requireGM();
+      for (const id in GM.MAPS) {
+        const def = GM.MAPS[id];
+        const trg = (def.events || []).filter((e) => e.type === 'trigger' && (GM.STORY[e.script] || []).some((s) => s.t === 'join'));
+        if (!trg.length) continue;
+        const base = analyze(GM, def, allDefeated(GM));
+        const obs = new Set(base.block);
+        trg.forEach((e) => obs.add(e.x + ',' + e.y));
+        const r = reachableFrom(GM, def, def.entry.x, def.entry.y, { obstacles: obs });
+        (def.events || []).forEach((e) => {
+          if ((e.type === 'exit' && e.to[0] !== 'hub') || e.type === 'boss') {
+            if (adjReach(r, e.x, e.y)) throw new Error(`${id}: 加入トリガー（${trg[0].script}）を踏まずに ${e.type}(${e.x},${e.y}) へ行ける`);
+          }
+        });
+      }
+    });
+
+    t('探索の広がり: 章の主要マップはビューポート（30×19）より広い', () => {
+      const GM = requireGM();
+      for (let n = 1; n <= 10; n++) {
+        const m = GM.MAPS[GM.CHAPTERS[n].map];
+        if (m._w < 30 || m._h < 19) throw new Error(`第${n}章 ${m.id}: ${m._w}×${m._h} は狭すぎる`);
+      }
     });
   });
 
@@ -805,7 +992,7 @@
   return {
     suite, test, api, runAll, runSuite, bootCheck,
     suites,
-    utils: { solidSet, tileAt, reachableFrom, adjReach, requireGM },
+    utils: { solidSet, tileAt, reachableFrom, adjReach, requireGM, analyze },
     VERSION: '1.0.0'
   };
 });
