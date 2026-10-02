@@ -13,8 +13,9 @@ window.GM = window.GM || {};
   const TILE = 16; // ビューポート (GM.VW/GM.VH) は動的（fitScreen が画面比に合わせ拡張）
 
   /* tile solidity（'T'=茨は通過不可） */
-  /* v3: 'v'=奈落 は通行不可（旧: 歩ける虚空で視覚と挙動が矛盾していた） */
-  const SOLID = new Set(['#', ' ', 'w', 't', 'r', 'c', 'C', 'b', 'p', 'm', 'x', 'o', '*', 'T', 'v', 'P', 'F', 'L', 'u', 'K']);
+  /* v3: 'v'=奈落 は通行不可（旧: 歩ける虚空で視覚と挙動が矛盾していた）
+     'S'=セーブ結晶は「調べる物体」（旧: 踏むと発動し、通りがかるたびにセーブ画面が開いていた） */
+  const SOLID = new Set(['#', ' ', 'w', 't', 'r', 'c', 'C', 'b', 'p', 'm', 'x', 'o', '*', 'T', 'v', 'P', 'F', 'L', 'u', 'K', 'S']);
   /* 影を落とすオクルーダー（壁＋背の高い障害物） */
   const OCCLUDER = new Set(['#', 'm', 'r', 'c', 'C', 'o', 'x', 't', 'T', 'P', 'K']);
   /* 床の上に置かれる装飾タイル（焼き込み時に下地の床を先に描く） */
@@ -506,7 +507,7 @@ window.GM = window.GM || {};
           S.flags['trg_' + key] = true;
           GM.runScript(ev.script);
         }
-      } else if ((ev.type === 'gate' || ev.type === 'gate2' || ev.type === 'exit' || ev.type === 'save') && !GM.uiOwner) {
+      } else if ((ev.type === 'gate' || ev.type === 'gate2' || ev.type === 'exit') && !GM.uiOwner) {
         // 踏み込んで発動（moveT完了後に発火させる）
         S.player._pendingStep = ev;
       }
