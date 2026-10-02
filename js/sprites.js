@@ -296,6 +296,59 @@ window.GM = window.GM || {};
         ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.fillRect(fx, fy, 1, 1);
         break;
       }
+      case 'marble': {
+        ctx.fillStyle = '#d8ccb0'; ctx.fillRect(x, y, TILE, TILE);
+        ctx.fillStyle = '#e8dec6'; ctx.fillRect(x + 1, y + 1, 14, 14);
+        ctx.fillStyle = 'rgba(170,140,80,.35)';
+        if (rnd(1, 1) > 0.5) { ctx.fillRect(x + 2, y + 5, 6, 1); ctx.fillRect(x + 7, y + 6, 4, 1); }
+        else { ctx.fillRect(x + 6, y + 10, 7, 1); }
+        ctx.fillStyle = '#c9a24a'; ctx.fillRect(x, y, TILE, 1); ctx.fillRect(x, y, 1, TILE);
+        break;
+      }
+      case 'ash': {
+        ctx.fillStyle = '#4b4448'; ctx.fillRect(x, y, TILE, TILE);
+        for (let i = 0; i < TILE; i += 2) for (let j = 0; j < TILE; j += 2) {
+          const r = rnd(i, j);
+          if (r > 0.8) { ctx.fillStyle = 'rgba(200,190,185,.12)'; ctx.fillRect(x + i, y + j, 2, 1); }
+          else if (r < 0.12) { ctx.fillStyle = 'rgba(10,6,8,.3)'; ctx.fillRect(x + i, y + j, 2, 2); }
+          else if (r > 0.785 && r < 0.79) { ctx.fillStyle = 'rgba(255,120,60,.55)'; ctx.fillRect(x + i, y + j, 1, 1); }
+        }
+        break;
+      }
+      case 'road': {
+        ctx.fillStyle = '#3c4152'; ctx.fillRect(x, y, TILE, TILE);
+        for (let i = 0; i < TILE; i += 2) for (let j = 0; j < TILE; j += 2) {
+          const r = rnd(i, j);
+          if (r > 0.82) { ctx.fillStyle = 'rgba(255,255,255,.06)'; ctx.fillRect(x + i, y + j, 1, 1); }
+          else if (r < 0.1) { ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.fillRect(x + i, y + j, 1, 1); }
+        }
+        if ((tx + ty) % 4 === 0) { ctx.fillStyle = 'rgba(255,217,74,.45)'; ctx.fillRect(x + 7, y + 4, 2, 8); }
+        break;
+      }
+      case 'dirt': {
+        ctx.fillStyle = '#8a6a44'; ctx.fillRect(x, y, TILE, TILE);
+        for (let i = 0; i < TILE; i += 2) for (let j = 0; j < TILE; j += 2) {
+          const r = rnd(i, j);
+          if (r > 0.72) { ctx.fillStyle = 'rgba(255,230,180,.12)'; ctx.fillRect(x + i, y + j, 2, 1); }
+          else if (r < 0.18) { ctx.fillStyle = 'rgba(50,30,10,.18)'; ctx.fillRect(x + i, y + j, 2, 1); }
+        }
+        if (rnd(5, 5) > 0.8) { ctx.fillStyle = '#6b5032'; ctx.fillRect(x + 4 + (rnd(2, 2) * 8 | 0), y + 9, 2, 2); }
+        break;
+      }
+      case 'rift': {
+        ctx.fillStyle = '#1c1638'; ctx.fillRect(x, y, TILE, TILE);
+        ctx.fillStyle = '#251d4a'; ctx.fillRect(x + 1, y + 1, 14, 14);
+        ctx.fillStyle = 'rgba(155,120,255,.35)';
+        ctx.fillRect(x, y, TILE, 1); ctx.fillRect(x, y, 1, TILE);
+        if (rnd(3, 3) > 0.55) { ctx.fillStyle = 'rgba(190,160,255,.5)'; ctx.fillRect(x + 3 + (rnd(1, 4) * 9 | 0), y + 3 + (rnd(4, 1) * 9 | 0), 1, 1); }
+        break;
+      }
+      case 'tile': {
+        const odd = (tx + ty) % 2;
+        ctx.fillStyle = odd ? '#c8ccd8' : '#b4b9c8'; ctx.fillRect(x, y, TILE, TILE);
+        ctx.fillStyle = 'rgba(255,255,255,.2)'; ctx.fillRect(x, y, TILE, 1);
+        break;
+      }
       default:
         ctx.fillStyle = '#6e7691'; ctx.fillRect(x, y, TILE, TILE);
     }
@@ -306,6 +359,18 @@ window.GM = window.GM || {};
   function drawWallTile(ctx, kind, tx, ty, variant, seed) {
     const x = tx * TILE, y = ty * TILE;
     const rnd = (i, j) => hash(tx * 16 + i, ty * 16 + j, (seed || 1) + 31);
+    if (variant === 'roof' || variant === 'roofcap') {
+      // 屋外の建物の屋根（旧: 真っ黒な天面が「穴」に見えていた）
+      const P = kind === 'metalwall' ? ['#34405f', '#43527a', '#27304a', '#6c7fae'] : ['#6e3a33', '#8a4a40', '#4e2723', '#c0705e'];
+      ctx.fillStyle = P[0]; ctx.fillRect(x, y, TILE, TILE);
+      for (let j = 0; j < TILE; j += 4) {
+        ctx.fillStyle = P[1]; ctx.fillRect(x, y + j, TILE, 3);
+        ctx.fillStyle = P[2]; ctx.fillRect(x + ((j / 4) % 2 ? 4 : 12), y + j, 1, 3);
+      }
+      if (variant === 'roofcap') { ctx.fillStyle = P[3]; ctx.fillRect(x, y, TILE, 2); }
+      ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.fillRect(x, y + 15, TILE, 1);
+      return;
+    }
     if (kind === 'metalwall') {
       ctx.fillStyle = '#0e1224'; ctx.fillRect(x, y, TILE, TILE);
       if (variant === 'front') {
@@ -329,6 +394,21 @@ window.GM = window.GM || {};
         if (rnd(1, 3) > 0.7) { ctx.fillStyle = 'rgba(255,255,255,.05)'; ctx.fillRect(x + (rnd(2, 4) * 12 | 0), y + 2, 2, 2); }
       }
       // 下端（床との境界)に暗線
+      ctx.fillStyle = 'rgba(0,0,0,.45)'; ctx.fillRect(x, y + 15, TILE, 1);
+    } else if (kind === 'cliff') {
+      ctx.fillStyle = '#3e3020'; ctx.fillRect(x, y, TILE, TILE);
+      if (variant === 'front') {
+        ctx.fillStyle = '#7a5c36'; ctx.fillRect(x, y, TILE, TILE);
+        ctx.fillStyle = '#8f6c40'; ctx.fillRect(x + 1, y + 1, 6, 6); ctx.fillRect(x + 9, y + 4, 6, 5); ctx.fillRect(x + 3, y + 10, 7, 4);
+        ctx.fillStyle = '#5a4126'; ctx.fillRect(x, y + 8, TILE, 1); ctx.fillRect(x + 8, y, 1, 8); ctx.fillRect(x + 11, y + 9, 1, 7);
+        ctx.fillStyle = 'rgba(255,230,170,.18)'; ctx.fillRect(x, y, TILE, 1);
+      } else {
+        ctx.fillStyle = '#5b4429'; ctx.fillRect(x, y, TILE, TILE);
+        if (variant === 'cap') { ctx.fillStyle = '#a3814f'; ctx.fillRect(x, y, TILE, 2); }
+        ctx.fillStyle = '#4a361f';
+        if (rnd(1, 3) > 0.4) ctx.fillRect(x + (rnd(2, 4) * 10 | 0) + 2, y + 5, 4, 2);
+        if (rnd(2, 5) > 0.5) ctx.fillRect(x + (rnd(3, 2) * 10 | 0) + 1, y + 11, 3, 2);
+      }
       ctx.fillStyle = 'rgba(0,0,0,.45)'; ctx.fillRect(x, y + 15, TILE, 1);
     } else { // brick wall
       ctx.fillStyle = '#12172a'; ctx.fillRect(x, y, TILE, TILE);
@@ -369,16 +449,18 @@ window.GM = window.GM || {};
       /* ---- 静的(焼き込み用の再現) ---- */
       case 'grass': case 'flower': case 'stone': case 'metal': case 'sand':
       case 'snow': case 'ice': case 'carpet': case 'wood': case 'void_static':
+      case 'marble': case 'ash': case 'road': case 'dirt': case 'rift': case 'tile':
         if (type === 'void_static') { ctx.fillStyle = '#04050d'; ctx.fillRect(x, y, TILE, TILE); break; }
         drawFloorTile(ctx, type, tx, ty, seed); break;
-      case 'wall': case 'metalwall':
+      case 'wall': case 'metalwall': case 'cliff':
         drawWallTile(ctx, type, tx, ty, 'flat', seed); break;
 
       /* ---- アニメーション ---- */
-      case 'water': {
-        ctx.fillStyle = '#2a5fb0'; ctx.fillRect(x, y, TILE, TILE);
+      case 'water': case 'slime': case 'sewage': {
+        const LQ = { water: ['#2a5fb0', '#3a77cc'], slime: ['#2f8a3c', '#56c25e'], sewage: ['#3d5248', '#53705f'] }[type];
+        ctx.fillStyle = LQ[0]; ctx.fillRect(x, y, TILE, TILE);
         const ph = Math.floor(t / 26) % 2;
-        ctx.fillStyle = '#3a77cc';
+        ctx.fillStyle = LQ[1];
         for (let j = 2; j < TILE; j += 5) ctx.fillRect(x + ((j * 3 + ph * 3) % TILE), y + j, 7, 1);
         ctx.fillStyle = 'rgba(190,230,255,.5)';
         ctx.fillRect(x + 3, y + 4 + ph, 5, 1);
@@ -540,6 +622,57 @@ window.GM = window.GM || {};
         ctx.fillRect(x + 3, y + 8, 1, 4); ctx.fillRect(x + 8, y + 6, 1, 4); ctx.fillRect(x + 13, y + 8, 1, 4);
         ctx.fillStyle = '#c23a4a';
         ctx.fillRect(x + 3, y + 7, 1, 2); ctx.fillRect(x + 8, y + 5, 1, 2);
+        break;
+      }
+      case 'pillar': {
+        ctx.fillStyle = 'rgba(0,0,0,.32)'; ctx.fillRect(x + 2, y + 13, 12, 3);
+        ctx.fillStyle = '#7d86a8'; ctx.fillRect(x + 3, y + 12, 10, 3);
+        ctx.fillStyle = '#9aa3c4'; ctx.fillRect(x + 4, y + 1, 8, 12);
+        ctx.fillStyle = '#c3cbe6'; ctx.fillRect(x + 5, y + 1, 2, 12);
+        ctx.fillStyle = '#646c8c'; ctx.fillRect(x + 10, y + 1, 2, 12);
+        ctx.fillStyle = '#7d86a8'; ctx.fillRect(x + 3, y, 10, 2);
+        break;
+      }
+      case 'fence': {
+        ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.fillRect(x, y + 13, TILE, 2);
+        ctx.fillStyle = '#9aa3c4'; ctx.fillRect(x, y + 5, TILE, 2); ctx.fillRect(x, y + 10, TILE, 2);
+        ctx.fillStyle = '#c3cbe6'; ctx.fillRect(x + 2, y + 3, 2, 11); ctx.fillRect(x + 12, y + 3, 2, 11);
+        ctx.fillStyle = '#646c8c'; ctx.fillRect(x + 3, y + 3, 1, 11); ctx.fillRect(x + 13, y + 3, 1, 11);
+        break;
+      }
+      case 'lamp': {
+        const pl = Math.sin(t / 30 + tx) * 0.5 + 0.5;
+        ctx.fillStyle = `rgba(255,220,140,${0.10 + pl * 0.06})`;
+        ctx.beginPath(); ctx.arc(x + 8, y + 4, 9, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.fillRect(x + 4, y + 14, 8, 2);
+        ctx.fillStyle = '#3d4566'; ctx.fillRect(x + 7, y + 5, 2, 10); ctx.fillRect(x + 5, y + 13, 6, 2);
+        ctx.fillStyle = '#ffe9a0'; ctx.fillRect(x + 5, y + 1, 6, 4);
+        ctx.fillStyle = '#fff8dc'; ctx.fillRect(x + 6, y + 2, 4, 2);
+        break;
+      }
+      case 'rubble': {
+        ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.fillRect(x + 1, y + 13, 14, 2);
+        ctx.fillStyle = '#5c5358'; ctx.fillRect(x + 1, y + 8, 7, 6); ctx.fillRect(x + 7, y + 5, 8, 9);
+        ctx.fillStyle = '#7a7076'; ctx.fillRect(x + 2, y + 8, 4, 2); ctx.fillRect(x + 8, y + 5, 5, 2);
+        ctx.fillStyle = '#3a3236'; ctx.fillRect(x + 4, y + 11, 6, 3);
+        ctx.fillStyle = '#8f6c40'; ctx.fillRect(x + 10, y + 3, 1, 5);
+        break;
+      }
+      case 'statue': {
+        ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.fillRect(x + 2, y + 14, 12, 2);
+        ctx.fillStyle = '#6d7490'; ctx.fillRect(x + 3, y + 11, 10, 4);
+        ctx.fillStyle = '#d9a441'; ctx.fillRect(x + 6, y + 2, 4, 3); ctx.fillRect(x + 5, y + 5, 6, 6);
+        ctx.fillStyle = '#ffd94a'; ctx.fillRect(x + 6, y + 2, 2, 2); ctx.fillRect(x + 6, y + 6, 2, 4);
+        ctx.fillStyle = '#8a6a1e'; ctx.fillRect(x + 10, y + 5, 1, 6);
+        break;
+      }
+      case 'door': {
+        ctx.fillStyle = '#05070f'; ctx.fillRect(x + 2, y, 12, TILE);
+        ctx.fillStyle = '#2a3354'; ctx.fillRect(x, y, 2, TILE); ctx.fillRect(x + 14, y, 2, TILE);
+        ctx.fillStyle = '#4a5682'; ctx.fillRect(x, y, TILE, 2);
+        const g2 = ctx.createLinearGradient(0, y, 0, y + TILE);
+        g2.addColorStop(0, 'rgba(98,214,255,0)'); g2.addColorStop(1, 'rgba(98,214,255,.22)');
+        ctx.fillStyle = g2; ctx.fillRect(x + 2, y + 2, 12, 14);
         break;
       }
       default:

@@ -8,7 +8,7 @@
    ============================================================ */
 'use strict';
 
-const VERSION = 'v1.4.0';
+const VERSION = 'v2.0.0';
 const CACHE_NAME = `gamemina-chronicle-${VERSION}`;
 const IMG_CACHE = `gamemina-images-${VERSION}`;
 const IMG_ORIGIN = 'https://raw.githubusercontent.com';

@@ -200,7 +200,7 @@ window.GM = window.GM || {};
           const meta = GM.saveMeta(slot);
           const label = slot === 'auto' ? 'AUTO' : `SLOT ${slot}`;
           const info = meta
-            ? `第${meta.chapter}章 / Lv${meta.lv} / ${U.fmt(meta.tg)}nTG / ${new Date(meta.ts).toLocaleString('ja-JP')}`
+            ? `${meta.chapter >= 11 ? 'クリア済' : '第' + meta.chapter + '章'} / Lv${meta.lv} / ${U.fmt(meta.tg)}nTG / ${new Date(meta.ts).toLocaleString('ja-JP')}`
             : '─ 空 ─';
           const row = el('div', 'slot-row');
           row.innerHTML = `<span>${esc(label)} ─ ${esc(info)}</span>`;
@@ -407,7 +407,7 @@ window.GM = window.GM || {};
         const meta = GM.saveMeta(slot);
         const label = slot === 'auto' ? 'AUTO' : `SLOT ${slot}`;
         const info = meta
-          ? `${label} ─ 第${meta.chapter}章 / Lv${meta.lv} / ${U.fmt(meta.tg)}nTG / ${new Date(meta.ts).toLocaleString('ja-JP')}`
+          ? `${label} ─ ${meta.chapter >= 11 ? "クリア済" : "第" + meta.chapter + "章"} / Lv${meta.lv} / ${U.fmt(meta.tg)}nTG / ${new Date(meta.ts).toLocaleString('ja-JP')}`
           : `${label} ─ ─ 空 ─`;
         const row = el('div', 'slot-row', `<span>${esc(info)}</span>`);
         row.addEventListener('click', () => { if (cb) cb(slot); });

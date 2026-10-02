@@ -189,6 +189,14 @@ window.GM = window.GM || {};
         menuBtn.blur();
       });
     }
+    // 🗺 ミニマップボタン
+    const mapBtn = $('btn-map');
+    if (mapBtn) {
+      mapBtn.addEventListener('click', () => {
+        if (!GM.uiOwner && GM.toggleMinimap) GM.toggleMinimap();
+        mapBtn.blur();
+      });
+    }
     // ⛶ フルスクリーンボタン
     const fsBtn = $('btn-fs');
     if (fsBtn) {
