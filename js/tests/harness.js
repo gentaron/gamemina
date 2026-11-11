@@ -971,6 +971,132 @@
     });
   });
 
+  suite('VARIANTS ─ 派生種の生成', function (t) {
+
+    /* 決定論的な擬似乱数（テスト専用） */
+    function seeded(seed) {
+      let x = seed >>> 0;
+      return () => { x = (Math.imul(x, 1664525) + 1013904223) >>> 0; return x / 4294967296; };
+    }
+
+    t('通常敵×接辞の全組み合わせが生成され、再生成しても増えない（冪等）', () => {
+      const GM = requireGM(), V = GM.VARIANTS;
+      if (!V) throw new Error('GM.VARIANTS が未ロード');
+      const affixes = Object.keys(V.AFFIXES).length;
+      t.ok(V.bases.length >= 10, '元になる通常敵が少なすぎる');
+      t.ok(V.keys.length >= V.bases.length * (affixes - 1), `派生種が少ない (${V.keys.length})`);
+      const before = Object.keys(GM.ENEMIES).length;
+      const again = V.forge();
+      t.eq(Object.keys(GM.ENEMIES).length, before, '再生成で敵が増えた');
+      t.eq(again.keys.length, V.keys.length, '再生成で派生種の数が変わった');
+      V.keys.forEach((k) => { if (k.split(V.SEP).length !== 2) throw new Error(`派生の派生が出来ている: ${k}`); });
+    });
+
+    t('全派生種: 技・弱点・数値・報酬が有効で、元より必ず手強く実入りが良い', () => {
+      const GM = requireGM(), V = GM.VARIANTS;
+      const ELS = ['phys', 'thunder', 'holy', 'void', 'water'];
+      V.keys.forEach((k) => {
+        const d = GM.ENEMIES[k], base = GM.ENEMIES[d.variant.base], a = V.AFFIXES[d.variant.affix];
+        if (!base || base.boss) throw new Error(`${k}: 元がボスまたは未定義`);
+        if (d.boss) throw new Error(`${k}: 派生種がボス扱い`);
+        d.skills.forEach((sk) => { if (!GM.ESKILLS[sk]) throw new Error(`${k}: 技 "${sk}" 未定義`); });
+        if (!d.skills.includes(a.skill)) throw new Error(`${k}: 接辞の技 "${a.skill}" を持っていない`);
+        (d.weak || []).forEach((w) => { if (!ELS.includes(w)) throw new Error(`${k}: 弱点 "${w}" は未知の属性`); });
+        ['hp', 'atk', 'def', 'mag', 'mdf', 'spd', 'exp', 'tg', 'lv'].forEach((f) => {
+          if (!Number.isInteger(d[f]) || d[f] < 1) throw new Error(`${k}: ${f}=${d[f]} が不正`);
+        });
+        if (d.hp < base.hp) throw new Error(`${k}: HP が元より低い`);
+        if (d.hp > base.hp * 1.6) throw new Error(`${k}: HP が元の1.6倍を超える（序盤で詰む）`);
+        if (d.exp < Math.round(base.exp * 1.4)) throw new Error(`${k}: 経験値の上乗せが足りない`);
+        if (d.drop && !GM.ITEMS[d.drop]) throw new Error(`${k}: ドロップ "${d.drop}" 未定義`);
+      });
+    });
+
+    t('全派生種: 絵は元と同じ寸法で、パレット内の色だけを使い、元と見分けがつく', () => {
+      const GM = requireGM(), V = GM.VARIANTS, PAL = GM.SPRITES.PAL;
+      V.keys.forEach((k) => {
+        const d = GM.ENEMIES[k], rows = GM.ENEMY_ART[d.spr], baseRows = GM.ENEMY_ART[GM.ENEMIES[d.variant.base].spr];
+        if (!rows) throw new Error(`${k}: 絵が無い`);
+        t.eq(rows.length, baseRows.length, `${k}: 行数が元と違う`);
+        let diff = 0;
+        rows.forEach((row, y) => {
+          t.eq(row.length, baseRows[y].length, `${k}: ${y}行目の幅が元と違う`);
+          for (let x = 0; x < row.length; x++) {
+            const ch = row[x], b = baseRows[y][x];
+            if ((ch === '.' || ch === ' ') !== (b === '.' || b === ' ')) throw new Error(`${k}: シルエットが元と違う (${x},${y})`);
+            if (ch !== '.' && ch !== ' ' && !PAL[ch]) throw new Error(`${k}: パレット外の色 "${ch}"`);
+            if (ch !== b) diff++;
+          }
+        });
+        if (diff < 8) throw new Error(`${k}: 元とほぼ同じ見た目（差分 ${diff} ピクセル）`);
+      });
+      // 同じ元から作った派生種どうしも見分けがつく
+      V.bases.forEach((baseKey) => {
+        const seen = new Map();
+        V.keys.filter((k) => GM.ENEMIES[k].variant.base === baseKey).forEach((k) => {
+          const sig = GM.ENEMY_ART[k].join('\n');
+          if (seen.has(sig)) throw new Error(`${k} と ${seen.get(sig)} の絵が同一`);
+          seen.set(sig, k);
+        });
+      });
+    });
+
+    t('敵の名前は全体で重複しない（派生種を含む）', () => {
+      const GM = requireGM();
+      const names = new Map();
+      for (const k in GM.ENEMIES) {
+        const n = GM.ENEMIES[k].name;
+        // 同じボスの再戦（celia / celiaext など）は別名なので、重複は不具合
+        if (names.has(n)) throw new Error(`"${n}" が ${names.get(n)} と ${k} で重複`);
+        names.set(n, k);
+      }
+    });
+
+    t('出現抽選: 決定論的・上限あり・ボスと入力配列には触れない', () => {
+      const GM = requireGM(), V = GM.VARIANTS;
+      const src = ['slime', 'bat', 'slime', 'cyberrat'];
+      const a = V.roll(src, seeded(7), { rate: 0.5 });
+      const b = V.roll(src, seeded(7), { rate: 0.5 });
+      t.eq(a.join(), b.join(), '同じ乱数列で結果が変わる');
+      t.eq(src.join(), 'slime,bat,slime,cyberrat', '入力の編成が書き換えられた');
+      t.eq(V.roll(src, seeded(1), { rate: 0 }).join(), src.join(), 'rate 0 なのに派生種が出た');
+      const all = V.roll(src, seeded(3), { rate: 1 });
+      t.eq(all.filter((k) => GM.ENEMIES[k].variant).length, V.MAX_PER_FIGHT, '1戦闘の上限を守っていない');
+      all.forEach((k) => { if (!GM.ENEMIES[k]) throw new Error(`抽選結果 "${k}" が未定義`); });
+      t.eq(V.roll(['executor', 'diana'], seeded(5), { rate: 1 }).join(), 'executor,diana', 'ボスが派生種に化けた');
+      // 多数回まわして、希少種が出すぎないこと・全接辞が出ること
+      const rng = seeded(42), tally = {};
+      for (let i = 0; i < 4000; i++) {
+        const id = V.pickAffix('slime', rng);
+        tally[id] = (tally[id] || 0) + 1;
+      }
+      Object.keys(V.AFFIXES).forEach((id) => { if (!tally[id]) throw new Error(`接辞 "${id}" が一度も出ない`); });
+      if (tally.gilded / 4000 > 0.1) throw new Error(`希少種が出すぎ (${tally.gilded}/4000)`);
+    });
+
+    t('編成表は通常種だけを参照する（派生種は抽選でのみ現れる）', () => {
+      const GM = requireGM();
+      for (const id in GM.FORMATIONS) {
+        GM.FORMATIONS[id].forEach((f) => f.forEach((k) => {
+          if (!GM.ENEMIES[k]) throw new Error(`FORMATIONS.${id}: "${k}" 未定義`);
+          if (GM.ENEMIES[k].variant) throw new Error(`FORMATIONS.${id}: 派生種 "${k}" を直接参照している`);
+        }));
+      }
+    });
+
+    t('図鑑: 発見記録の登録と再読込', () => {
+      const GM = requireGM();
+      GM.Codex.reset();
+      t.eq(GM.Codex.mark('slime+tide'), true, '初回登録が true を返さない');
+      t.eq(GM.Codex.mark('slime+tide'), false, '二重登録が false を返さない');
+      GM.Codex._cache = null; // 保存先から読み直す
+      t.ok(GM.Codex.has('slime+tide'), '再読込で記録が消えた');
+      t.eq(GM.Codex.count(), 1);
+      GM.Codex.reset();
+      t.eq(GM.Codex.count(), 0);
+    });
+  });
+
   /* ============================================================
      起動時自己診断（同期・軽量・プレイ環境に常駐）
      ============================================================ */

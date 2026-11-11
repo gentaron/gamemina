@@ -301,6 +301,7 @@ window.GM = window.GM || {};
       <div class="t-cast" id="t-cast">${castHtml}</div>
       <div class="t-foot"><span class="t-keyhint">↑↓ 移動　Z / Enter 決定　X / Esc キャンセル　C メニュー　F 全画面</span><br>10 CHAPTERS / 8 PARTY MEMBERS / OFFLINE PWA ─ art: github.com/gentaron/image</div>
       <div class="t-fs" id="t-fs" title="フルスクリーン切替 (F)">⛶ 全画面</div>
+      <a class="t-codex" href="codex.html" title="魔物図鑑を開く">📖 図鑑</a>
       <div class="t-inst hidden" id="t-install">⬇ インストール</div>`;
     box.classList.remove('hidden');
     const tfs = $('t-fs');

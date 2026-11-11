@@ -6,7 +6,7 @@
 
 *Symphony of Stars ─ A full-scale retro RPG tracing the EDU universe*
 
-`10 CHAPTERS` · `23 HAND-CRAFTED MAPS` · `8 PARTY MEMBERS` · `20+ BOSSES` · `OFFLINE PWA` · `BUILT-IN QA`
+`10 CHAPTERS` · `23 HAND-CRAFTED MAPS` · `8 PARTY MEMBERS` · `20+ BOSSES` · `119 ENEMY KINDS FROM 17 SPRITES` · `OFFLINE PWA` · `BUILT-IN QA`
 
 [![QA](https://github.com/gentaron/gamemina/actions/workflows/test.yml/badge.svg)](https://github.com/gentaron/gamemina/actions/workflows/test.yml)
 
@@ -31,6 +31,25 @@ E暦528年。歴史の継ぎ目から「歪み」が漏れ始めた世界を修�
 - **アルカイブ** ── 歴史の記録を集めるロア図鑑（20項目）
 - **完全生成のサウンド** ── WebAudioによるチップチューンBGM 10曲+効果音（音源ファイル不要）
 - **完全オフラインPWA** ── Service Workerプリキャッシュ、インストール対応、セーブは端末内+コード書き出し
+
+### Variant Forge ── 17体の絵から119種の敵
+
+新しい絵を1枚も描かずに、通常敵 **17体** から派生種 **102体** を起動時に生成します（[`js/data/variants.js`](./js/data/variants.js)）。
+
+| 接辞 | 属性 | 特徴 |
+|------|------|------|
+| アクア〈潮〉 | 水 | 魔法寄りで堅い。雷が弱点。冷気のブレスを使う |
+| ボルト〈雷〉 | 雷 | 素早い。虚が弱点。プラズマボルトを使う |
+| セイクリッド〈聖〉 | 聖 | 魔防が高い。虚が弱点。全体攻撃の光を降らせる |
+| ホロウ〈虚〉 | 虚 | 攻撃的で脆い。聖が弱点。虚無の掌を使う |
+| エルダー〈古〉 | 物理 | 全体に1.2〜1.5倍。怒ると攻撃力が上がる。報酬2.2倍 |
+| ゴールデン〈金〉 | 物理 | 希少種。堅くて速い。**報酬4倍** |
+
+- **絵** ── 元のドット絵の色を、明るさの順位を保ったまま接辞の3階調へ写す。輪郭と白はそのまま。体が灰色の敵は灰色を体色として扱い、元の配色とかぶるときは代わりの階調で塗り直す
+- **数値と行動** ── 接辞の倍率を掛け、属性の技を1つ足し、弱点を属性相性で差し替える。元の敵を直せば派生種も自動で追従する
+- **出現** ── 通常エンカウントの各枠が14%で派生種に化ける（1戦闘2体まで）。ボスは化けない
+- **図鑑** ── タイトル左上の **📖 図鑑**（[`codex.html`](./codex.html)）。ゲームと同じデータをそのまま読んで描く別画面で、出会った派生種が埋まっていく（全137種）
+- **機械検証** ── 全派生種の技・弱点・数値・絵の寸法とシルエット・見分けやすさ・名前の一意性・抽選の決定論性を、内蔵テストが push のたびに確認
 
 ### マップ v3（全23マップ手設計）
 
@@ -102,6 +121,7 @@ npm test
 gamemina/
 ├── index.html              # エントリ
 ├── test.html               # 内蔵QAコンソール（全テストをブラウザで実行）
+├── codex.html              # 魔物図鑑（ゲームと同じデータから描く別画面）
 ├── manifest.webmanifest    # PWAマニフェスト
 ├── sw.js                   # Service Worker（オフライン）
 ├── css/style.css           # UIシステム
@@ -109,7 +129,7 @@ gamemina/
 │   ├── audio.js            # WebAudio チップチューン
 │   ├── sprites.js          # ドット絵/タイル描画
 │   ├── main.js             # 起動・ループ・自己診断
-│   ├── data/               # ゲームデータ（キャラ/敵/マップ/ストーリー）
+│   ├── data/               # ゲームデータ（キャラ/敵/派生種/マップ/ストーリー）
 │   ├── engine/             # コア/戦闘/フィールド/メニュー/セーブ/debug
 │   └── tests/              # ★内蔵テスト環境（QAハーネス/UI結合/コンソール）
 ├── tests/run.mjs           # Node CLI ランナー（CI が実行）
@@ -134,6 +154,7 @@ gamemina/
 - Character portraits are **URL-indexed** from [gentaron/image](https://github.com/gentaron/image) (dialogue, battle cut-ins, menu, in-game cast gallery) with runtime service-worker caching for offline play
 - Full offline PWA: service worker precache, installable, localStorage saves + export codes
 - **23 hand-crafted maps (v3)**: two areas per chapter, visible field bosses, seal gimmicks, minimap (Q), area banners
+- **Variant Forge**: 102 derived enemies generated at boot from 17 base sprites (palette-ramp recolour + stat/skill/weakness affixes), a 14% chance per encounter slot, and a bestiary page (`codex.html`) drawn from the same data
 - **Built-in QA environment**: 48+ automated checks (map connectivity / zero pointless dead ends / zero isolated areas / exact landing points / seal order / story completion / battle regression tests / save round-trip) run on every push via GitHub Actions — open `test.html` or append `?test=1` in-browser to run the full suite graphically, `?debug=1` for the dev overlay
 
 **Play:** open `index.html` in any modern browser, or install it as a PWA. Keyboard (arrows/WASD + Z/X), touch D-pad, and gamepad are supported.

@@ -8,7 +8,7 @@
    ============================================================ */
 'use strict';
 
-const VERSION = 'v2.0.0';
+const VERSION = 'v2.1.0';
 const CACHE_NAME = `gamemina-chronicle-${VERSION}`;
 const IMG_CACHE = `gamemina-images-${VERSION}`;
 const IMG_ORIGIN = 'https://raw.githubusercontent.com';
@@ -25,6 +25,8 @@ const OFFLINE_URLS = [
   './js/data/items.js',
   './js/data/characters.js',
   './js/data/enemies.js',
+  './js/data/variants.js',
+  './codex.html',
   './js/data/maps.js',
   './js/data/portraits.js',
   './js/data/story.js',

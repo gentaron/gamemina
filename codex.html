@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>魔物図鑑 ─ GAMEMINA CHRONICLE</title>
+<meta name="description" content="GAMEMINA CHRONICLE の魔物図鑑。ゲームと同じデータから描く、通常種・派生種・ボスの一覧。">
+<meta name="theme-color" content="#05070f">
+<link rel="icon" href="icons/icon-192.png">
+<style>
+  :root {
+    --navy-0: #05070f; --navy-1: #0b0e1a; --navy-2: #101632; --line: #23306a;
+    --ink: #eaf1ff; --ink-dim: #9fb0d8; --gold: #f4c95d; --gold-2: #b8860b; --cyan: #62d6ff;
+    --font: "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic UI", "Meiryo", sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { background: var(--navy-0); }
+  body { font-family: var(--font); color: var(--ink); line-height: 1.6; padding: 16px 16px 48px; -webkit-text-size-adjust: 100%; }
+  a { color: var(--gold); }
+  .wrap { max-width: 1040px; margin: 0 auto; }
+  header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px; margin: 6px 0 14px; }
+  h1 { font-size: 22px; letter-spacing: .12em; color: var(--gold); text-wrap: balance; }
+  header p { color: var(--ink-dim); font-size: 12px; flex: 1 1 240px; }
+  .back { font-size: 12px; border: 1px solid var(--gold-2); border-radius: 3px; padding: 5px 10px; text-decoration: none; white-space: nowrap; }
+
+  .bar { position: sticky; top: 0; z-index: 2; background: var(--navy-0); padding: 10px 0; display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; border-bottom: 1px solid var(--line); }
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+  .tabs button, .toggle { font: inherit; font-size: 12px; color: var(--ink-dim); background: var(--navy-1); border: 1px solid var(--line); border-radius: 3px; padding: 6px 12px; cursor: pointer; }
+  .tabs button[aria-pressed="true"] { color: var(--navy-0); background: var(--gold); border-color: var(--gold); font-weight: 700; }
+  .tabs button:focus-visible, .toggle:focus-visible, .back:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+  .toggle[aria-pressed="true"] { color: var(--cyan); border-color: var(--cyan); }
+  .progress { margin-left: auto; font-size: 12px; color: var(--ink-dim); font-variant-numeric: tabular-nums; display: flex; align-items: center; gap: 8px; }
+  .meter { width: 120px; height: 6px; background: var(--navy-2); border-radius: 3px; overflow: hidden; }
+  .meter i { display: block; height: 100%; background: var(--gold); }
+
+  h2 { font-size: 13px; letter-spacing: .2em; color: var(--cyan); margin: 26px 0 10px; }
+  .family { background: linear-gradient(180deg, rgba(14,22,66,.9), rgba(6,10,34,.9)); border: 1px solid var(--line); border-radius: 6px; padding: 14px; margin: 0 0 12px; }
+  .base { display: flex; gap: 14px; align-items: center; }
+  .base canvas, .tile canvas, .boss canvas { image-rendering: pixelated; flex: none; }
+  .base .info { min-width: 0; }
+  .name { font-weight: 700; font-size: 15px; overflow-wrap: anywhere; }
+  .meta { font-size: 11px; color: var(--ink-dim); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+  .meta b { color: var(--ink); font-weight: 600; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 8px; margin-top: 12px; }
+  .tile { background: rgba(5,7,15,.55); border: 1px solid var(--line); border-radius: 4px; padding: 8px; display: grid; grid-template-columns: auto 1fr; gap: 4px 8px; align-items: center; }
+  .tile .tname { font-size: 11px; font-weight: 700; line-height: 1.35; overflow-wrap: anywhere; }
+  .tile .tmeta { grid-column: 1 / -1; font-size: 10px; color: var(--ink-dim); line-height: 1.5; font-variant-numeric: tabular-nums; }
+  .chip { display: inline-block; font-size: 10px; line-height: 1; padding: 3px 5px; border-radius: 2px; border: 1px solid currentColor; margin-right: 4px; }
+  .el-water { color: #62d6ff; } .el-thunder { color: #ffd94a; } .el-holy { color: #ffe9f2; } .el-void { color: #c08cf0; } .el-phys { color: #ff9d3c; }
+  .rare { border-color: var(--gold); box-shadow: inset 0 0 0 1px rgba(244,201,93,.35); }
+  .unseen canvas { filter: brightness(0) drop-shadow(0 0 1px #3a4a8a); opacity: .9; }
+  .unseen .tname, .unseen .name { color: var(--ink-dim); }
+  .bosses { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+  .boss { background: linear-gradient(180deg, rgba(40,14,30,.75), rgba(6,10,34,.9)); border: 1px solid #5a2f4a; border-radius: 6px; padding: 12px; display: flex; gap: 12px; align-items: center; }
+  .empty { color: var(--ink-dim); font-size: 13px; padding: 20px 0; }
+  footer { margin-top: 28px; font-size: 11px; color: var(--ink-dim); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>魔物図鑑</h1>
+    <p>ゲームと同じデータから描いています。派生種は、通常種のドット絵と数値に「接辞」を掛けて生成したもの。出会うとここに記録されます。</p>
+    <a class="back" href="./">◀ ゲームに戻る</a>
+  </header>
+
+  <div class="bar">
+    <div class="tabs" role="group" aria-label="表示する種類">
+      <button type="button" data-tab="all" aria-pressed="true">すべて</button>
+      <button type="button" data-tab="family" aria-pressed="false">通常種と派生種</button>
+      <button type="button" data-tab="boss" aria-pressed="false">ボス</button>
+    </div>
+    <button type="button" class="toggle" id="reveal" aria-pressed="false">未発見も表示</button>
+    <div class="progress"><span id="count"></span><span class="meter" aria-hidden="true"><i id="meter"></i></span></div>
+  </div>
+
+  <main id="out"></main>
+  <footer>発見記録はこの端末のブラウザに保存されます。セーブデータとは別です。</footer>
+</div>
+
+<script src="js/data/enemyart.js"></script>
+<script src="js/sprites.js"></script>
+<script src="js/data/enemies.js"></script>
+<script src="js/data/variants.js"></script>
+<script src="js/data/maps.js"></script>
+<script>
+(function () {
+  'use strict';
+  const GM = window.GM, V = GM.VARIANTS, E = GM.ENEMIES;
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const EL = { water: '水', thunder: '雷', holy: '聖', void: '虚', phys: '物理' };
+  let tab = 'all', reveal = false;
+
+  /* 生息地: 編成表 → マップ名 */
+  const habitat = {};
+  for (const id in GM.MAPS) {
+    const m = GM.MAPS[id];
+    const table = m.encounters && GM.FORMATIONS[m.encounters];
+    if (!table) continue;
+    new Set(table.flat()).forEach((key) => { (habitat[key] = habitat[key] || new Set()).add(m.name.replace(/\s+[A-Z]+\d+$/, '')); });
+  }
+  const bossHome = {};
+  for (const id in GM.MAPS) {
+    (GM.MAPS[id].events || []).forEach((ev) => { if (ev && ev.boss) bossHome[ev.boss] = GM.MAPS[id].name; });
+  }
+
+  function sprite(key, scale) {
+    const size = GM.SPRITES.enemySize(E[key].spr, scale);
+    const cv = document.createElement('canvas');
+    cv.width = size.w; cv.height = size.h;
+    cv.style.width = size.w + 'px'; cv.style.height = size.h + 'px';
+    cv.setAttribute('role', 'img');
+    const ctx = cv.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+    GM.SPRITES.drawEnemy(ctx, E[key].spr, size.w / 2, size.h, scale, {});
+    return cv;
+  }
+  const weakText = (d) => (d.weak && d.weak.length ? d.weak.map((w) => EL[w] || w).join('・') : 'なし');
+  const skillText = (d) => d.skills.map((s) => (GM.ESKILLS[s] ? GM.ESKILLS[s].name : s)).join(' / ');
+  const seen = (key) => reveal || GM.Codex.has(key);
+
+  function familyNode(baseKey) {
+    const d = E[baseKey];
+    const box = document.createElement('section');
+    box.className = 'family';
+    const base = document.createElement('div');
+    base.className = 'base';
+    const cv = sprite(baseKey, 4);
+    cv.setAttribute('aria-label', d.name);
+    base.appendChild(cv);
+    const info = document.createElement('div');
+    info.className = 'info';
+    info.innerHTML = `<div class="name">${esc(d.name)}</div>
+      <div class="meta">Lv <b>${d.lv}</b>　HP <b>${d.hp}</b>　攻 <b>${d.atk}</b>　防 <b>${d.def}</b>　魔 <b>${d.mag}</b>　速 <b>${d.spd}</b></div>
+      <div class="meta">弱点 <b>${esc(weakText(d))}</b>　技 ${esc(skillText(d))}</div>
+      <div class="meta">生息 ${esc(habitat[baseKey] ? [...habitat[baseKey]].join('、') : '特定の場面のみ')}</div>`;
+    base.appendChild(info);
+    box.appendChild(base);
+
+    const tiles = document.createElement('div');
+    tiles.className = 'tiles';
+    V.keys.filter((k) => E[k].variant.base === baseKey).forEach((key) => {
+      const v = E[key], a = V.AFFIXES[v.variant.affix], known = seen(key);
+      const tile = document.createElement('div');
+      tile.className = 'tile' + (known ? '' : ' unseen') + (a.rare ? ' rare' : '');
+      const tcv = sprite(key, 2);
+      tcv.setAttribute('aria-label', known ? v.name : '未発見の派生種');
+      tile.appendChild(tcv);
+      const name = document.createElement('div');
+      name.className = 'tname';
+      name.innerHTML = known ? esc(v.name) : '？？？';
+      tile.appendChild(name);
+      const meta = document.createElement('div');
+      meta.className = 'tmeta';
+      meta.innerHTML = known
+        ? `<span class="chip el-${esc(a.el)}">${esc(a.tag)}</span>HP ${v.hp}　弱点 ${esc(weakText(v))}<br>＋${esc(GM.ESKILLS[a.skill].name)}　報酬 ×${a.reward}`
+        : `<span class="chip el-${esc(a.el)}">${esc(a.tag)}</span>${a.rare ? '希少種' : 'まだ出会っていない'}`;
+      tile.title = known ? a.lore : '';
+      tile.appendChild(meta);
+      tiles.appendChild(tile);
+    });
+    box.appendChild(tiles);
+    return box;
+  }
+
+  function bossNode(key) {
+    const d = E[key], known = seen(key);
+    const box = document.createElement('div');
+    box.className = 'boss' + (known ? '' : ' unseen');
+    const cv = sprite(key, 3);
+    cv.setAttribute('aria-label', known ? d.name : '未発見のボス');
+    box.appendChild(cv);
+    const info = document.createElement('div');
+    info.className = 'info';
+    info.style.minWidth = '0';
+    info.innerHTML = known
+      ? `<div class="name">${esc(d.name)}</div><div class="meta">Lv <b>${d.lv}</b>　HP <b>${d.hp}</b>　弱点 <b>${esc(weakText(d))}</b></div><div class="meta">${esc(bossHome[key] || (d.hidden ? '隠しボス' : ''))}</div>`
+      : `<div class="name">？？？</div><div class="meta">${d.hidden ? '隠しボス' : esc(bossHome[key] || 'まだ出会っていない')}</div>`;
+    box.appendChild(info);
+    return box;
+  }
+
+  function render() {
+    const out = $('out');
+    out.textContent = '';
+    const bosses = Object.keys(E).filter((k) => E[k].boss);
+    if (tab !== 'boss') {
+      const h = document.createElement('h2');
+      h.textContent = `通常種 ${V.bases.length} ／ 派生種 ${V.keys.length}`;
+      out.appendChild(h);
+      V.bases.slice().sort((a, b) => E[a].lv - E[b].lv).forEach((k) => out.appendChild(familyNode(k)));
+    }
+    if (tab !== 'family') {
+      const h = document.createElement('h2');
+      h.textContent = `ボス ${bosses.length}`;
+      out.appendChild(h);
+      const grid = document.createElement('div');
+      grid.className = 'bosses';
+      bosses.sort((a, b) => E[a].lv - E[b].lv).forEach((k) => grid.appendChild(bossNode(k)));
+      out.appendChild(grid);
+    }
+    const all = [...V.bases, ...V.keys, ...bosses];
+    const found = all.filter((k) => GM.Codex.has(k)).length;
+    $('count').textContent = `発見 ${found} / ${all.length}`;
+    $('meter').style.width = (all.length ? (found / all.length) * 100 : 0) + '%';
+  }
+
+  document.querySelectorAll('.tabs button').forEach((btn) => btn.addEventListener('click', () => {
+    tab = btn.dataset.tab;
+    document.querySelectorAll('.tabs button').forEach((b) => b.setAttribute('aria-pressed', String(b === btn)));
+    render();
+  }));
+  $('reveal').addEventListener('click', () => {
+    reveal = !reveal;
+    $('reveal').setAttribute('aria-pressed', String(reveal));
+    render();
+  });
+  render();
+})();
+</script>
+</body>
+</html>
