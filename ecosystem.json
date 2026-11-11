@@ -1,0 +1,52 @@
+{
+  "$schema": "https://raw.githubusercontent.com/gentaron/infocollect/HEAD/ecosystem/schema.json",
+  "schema": 1,
+  "name": "gamemina",
+  "group": "edu",
+  "groupLabel": "EDU 宇宙",
+  "status": "active",
+  "role": "GAMEMINA CHRONICLE — EDU をなぞる本格ファンタジー RPG（PWA・内蔵QA）",
+  "stack": "素の JS · PWA",
+  "produces": [
+    "game"
+  ],
+  "consumes": [
+    "lore",
+    "art"
+  ],
+  "upstream": [
+    {
+      "repo": "edutext",
+      "flows": [
+        "lore"
+      ],
+      "url": "https://github.com/gentaron/edutext"
+    },
+    {
+      "repo": "image",
+      "flows": [
+        "art"
+      ],
+      "url": "https://github.com/gentaron/image"
+    }
+  ],
+  "downstream": [],
+  "siblings": [
+    "edutext",
+    "image",
+    "edu",
+    "eurekaspace",
+    "irisworlds",
+    "laylaland",
+    "edunft"
+  ],
+  "hub": {
+    "repo": "https://github.com/gentaron/infocollect",
+    "map": "https://github.com/gentaron/infocollect/blob/HEAD/ecosystem/README.md",
+    "kb": "https://raw.githubusercontent.com/gentaron/infocollect/HEAD/docs/kb",
+    "mcp": [
+      "infocollect-kb",
+      "forge"
+    ]
+  }
+}

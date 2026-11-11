@@ -145,3 +145,16 @@ gamemina/
 ---
 
 *Original lore & characters: Eternal Dominion Universe (EDU) by gentaron*
+
+<!-- ecosystem:begin (自動生成: gentaron/infocollect の ecosystem/registry.json から。手で直さない) -->
+
+## つながり
+
+gentaron のリポジトリ群のうち **EDU 宇宙** の一つ。GAMEMINA CHRONICLE — EDU をなぞる本格ファンタジー RPG（PWA・内蔵QA）。
+
+- **受け取る**: [edutext](https://github.com/gentaron/edutext)（EDU の原典）、[image](https://github.com/gentaron/image)（キャラクターアート）
+- **同じ島**: [edu](https://github.com/gentaron/edu)、[eurekaspace](https://github.com/gentaron/eurekaspace)、[irisworlds](https://github.com/gentaron/irisworlds)、[laylaland](https://github.com/gentaron/laylaland)、[edunft](https://github.com/gentaron/edunft)
+
+全体の地図 → [ecosystem](https://github.com/gentaron/infocollect/blob/HEAD/ecosystem/README.md)
+
+<!-- ecosystem:end -->
