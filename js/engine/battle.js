@@ -126,6 +126,12 @@ window.GM = window.GM || {};
       GM.AUDIO.playBGM(opts.boss ? (isFinal ? 'final' : 'boss') : 'battle');
       GM.BatUI.buildParty();
       GM.BatUI.log('');
+      // 図鑑: 初めて出会った敵を記録（派生種は知らせる）
+      if (GM.Codex) {
+        let fresh = null;
+        B.enemies.forEach((e) => { if (GM.Codex.mark(e.key) && e.def.variant) fresh = e; });
+        if (fresh && GM.toast) GM.toast(`派生種「${fresh.name}」を図鑑に記録した`);
+      }
       if (opts.boss || B.enemies.some((e) => e.boss)) showBossIntro(B.enemies);
       B.round = 0;
       nextRound();

@@ -517,7 +517,8 @@ window.GM = window.GM || {};
   function startRandomEncounter() {
     const table = GM.FORMATIONS[S.map.encounters];
     if (!table || !table.length) return;
-    const formation = U.pick(table);
+    // 一部の枠が派生種（Variant Forge）に化ける
+    const formation = GM.VARIANTS ? GM.VARIANTS.roll(U.pick(table)) : U.pick(table);
     GM.AUDIO.sfx('encounter');
     GM.Battle.run(formation, { noEscape: !!S.map.noEscape });
   }
