@@ -2,3 +2,8 @@
 Thumbs.db
 *.log
 node_modules/
+
+# secrets
+.env
+.env.*
+!.env.example
