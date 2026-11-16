@@ -8,14 +8,14 @@
    ============================================================ */
 'use strict';
 
-const VERSION = 'v2.1.0';
+const VERSION = 'v2.1.1';
 const CACHE_NAME = `gamemina-chronicle-${VERSION}`;
 const IMG_CACHE = `gamemina-images-${VERSION}`;
 const IMG_ORIGIN = 'https://raw.githubusercontent.com';
 const OFFLINE_URLS = [
   './',
   './index.html',
-  './manifest.webmanifest',
+  './manifest.webmanifest', "./icons/eureka/icon-192.png", "./icons/eureka/icon-512.png", "./icons/eureka/icon-maskable-192.png", "./icons/eureka/icon-maskable-512.png", "./icons/eureka/favicon.ico", "./icons/eureka/apple-touch-icon.png",
   './css/style.css',
   './js/audio.js',
   './js/sprites.js',
